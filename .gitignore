@@ -1,0 +1,17 @@
+# OS / sync-client artifacts
+.DS_Store
+._*
+.Spotlight-V100
+.Trashes
+desktop.ini
+Thumbs.db
+Icon?
+
+# Office lock files
+~$*
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
