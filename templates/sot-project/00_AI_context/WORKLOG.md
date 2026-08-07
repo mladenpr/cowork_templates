@@ -11,7 +11,7 @@ so the entry stays resolvable later.
 
 ## {{DATE}} — Repository created
 
-- Structure instantiated from the `sot-project` template:
+- Structure instantiated from the `sot-project` template **v{{TEMPLATE_VERSION}}**:
   `00_AI_context/` (PROJECT, INDEX, MANIFEST, WORKLOG, sot/), `01_SoT/`,
   `02_derivatives/` (with `_extracted/`), `03_deliverables/` (with
   `REGISTER.md`), `04_tools/`, `05_temp/`, `_to_delete/`.

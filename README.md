@@ -149,6 +149,39 @@ followed, not because anything enforces them. That is a change from the cloud
 bridge, where deletion was simply impossible, and it is the reason cleanup goes
 through `_to_delete/` rather than through `rm`.
 
+## Versioning
+
+Releases are git tags on this repository — `v1.0.0` was the initial release,
+`v1.1.0` retargeted the template at document work on a synced drive. `VERSION`
+holds the current number and [`CHANGELOG.md`](CHANGELOG.md) explains what each
+one changed, including what *major*, *minor* and *patch* mean for a template as
+opposed to a library.
+
+Each project records the version it was created from, in its own `README.md`
+footer and its first WORKLOG entry. To survey a folder of projects:
+
+```bash
+grep -h "Instantiated from" ~/OneDrive/01_PROJECTS/*/README.md
+```
+
+### Upgrading a project that already exists
+
+A project is a copy, not a link. Nothing propagates once it is created, and
+that is deliberate — a live project should not have its rules changed under it
+mid-engagement.
+
+To pick up newer tooling, copy `templates/sot-project/04_tools/*.py` over the
+project's copies and re-run them. The scripts are self-contained and hold no
+project state, so this is safe at any point; `update_index.py` will reconcile
+against the existing manifest on the next scan.
+
+Rule changes in `README.md` and `CLAUDE.md` are a judgement call. Applying them
+means re-reading the diff in the changelog and editing two files by hand. Not
+applying them is fine too, as long as the footer still says which version the
+project is on — a project finishing out on v1.0 rules is coherent; a project
+running v1.1 tooling while claiming v1.0 rules is not. Update the footer when
+you upgrade.
+
 ## Documentation
 
 - [`docs/pattern.md`](docs/pattern.md) — why the structure is shaped this way,
