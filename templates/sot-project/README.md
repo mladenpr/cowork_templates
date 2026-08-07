@@ -173,5 +173,9 @@ changes get their own entry.
 
 ---
 
-Instantiated from the `sot-project` template
+Instantiated from the `sot-project` template **v{{TEMPLATE_VERSION}}**
 (<https://github.com/mladenpr/cowork_templates>) on {{DATE}}.
+
+A project is a copy, not a link — nothing propagates from the template after
+this point. This line is how you tell, months later, which rules and which
+tooling this project actually has.

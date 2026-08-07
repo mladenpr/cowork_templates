@@ -2,6 +2,32 @@
 
 All notable changes to the templates in this repository.
 
+Releases are git tags on this repository (`v1.0.0`, `v1.1.0`), and the current
+number lives in `VERSION`. Every project stamps the template version it was
+created from into its own `README.md` footer and its first WORKLOG entry —
+a project is a copy, not a link, so that stamp is the only record of which
+rules and tooling it actually has.
+
+Semantic versioning, read for a template rather than a library:
+
+- **major** — the schema or a rule changes such that an existing project cannot
+  simply adopt it; upgrading means migrating a live project by hand.
+- **minor** — new tooling, new rules or new template files that an existing
+  project can take or leave.
+- **patch** — fixes to the scripts or the documentation, with no change to the
+  structure or the rules.
+
+## [Unreleased]
+
+### Added
+
+- `VERSION` at the repository root as the single source of truth, and a
+  `{{TEMPLATE_VERSION}}` placeholder stamped into each new project's README
+  footer and first WORKLOG entry.
+- `new_project.py --version`.
+- Versioning policy (above) and an "Upgrading a project that already exists"
+  section in the repository README.
+
 ## [1.1.0] — 2026-08-07
 
 Retargets the template at document work (Word, PDF, Excel) on a synced

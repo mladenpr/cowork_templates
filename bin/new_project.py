@@ -13,7 +13,12 @@ What it does:
    INDEX.md / MANIFEST.json baseline.
 
 Placeholders substituted: {{PROJECT_NAME}}, {{PROJECT_FOLDER}}, {{CLIENT}},
-{{OWNER}}, {{DATE}}, {{CLIENT_SUFFIX}}.
+{{OWNER}}, {{DATE}}, {{CLIENT_SUFFIX}}, {{TEMPLATE_VERSION}}.
+
+The template version is read from the VERSION file at the repository root and
+stamped into the new project's README footer and its first WORKLOG entry. A
+project is a copy, not a link: nothing propagates once it is created, so the
+stamp is the only record of which rules and tooling it has.
 
 Put the destination inside a synced cloud drive, and do NOT `git init` in it
 (rule R9) — the sync client and git fight over the object store.
@@ -27,8 +32,18 @@ import sys
 from datetime import date
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-TEMPLATE = os.path.join(os.path.dirname(HERE), "templates", "sot-project")
+ROOT = os.path.dirname(HERE)
+TEMPLATE = os.path.join(ROOT, "templates", "sot-project")
+VERSION_FILE = os.path.join(ROOT, "VERSION")
 TEXT_EXT = {".md", ".py", ".json", ".txt", ".csv", ".yml", ".yaml", ".toml", ".cfg"}
+
+
+def template_version():
+    try:
+        with open(VERSION_FILE, encoding="utf-8") as f:
+            return f.read().strip() or "unknown"
+    except OSError:
+        return "unknown"
 
 
 def substitute(path, mapping):
@@ -53,6 +68,8 @@ def main():
                     help="start date, ISO (default: today)")
     ap.add_argument("--force", action="store_true",
                     help="allow writing into an existing non-empty folder")
+    ap.add_argument("--version", action="version",
+                    version=f"sot-project template v{template_version()}")
     args = ap.parse_args()
 
     if not os.path.isdir(TEMPLATE):
@@ -65,7 +82,9 @@ def main():
                  f"Pass --force to write into it anyway.")
 
     name = args.name or folder
+    version = template_version()
     mapping = {
+        "{{TEMPLATE_VERSION}}": version,
         "{{PROJECT_NAME}}": name,
         "{{PROJECT_FOLDER}}": folder,
         "{{CLIENT}}": args.client or "_TBC_",
@@ -94,7 +113,7 @@ def main():
     subprocess.run([sys.executable, index, dest, "--name", name, "--hash"],
                    check=True)
 
-    print(f"\nProject created: {dest}")
+    print(f"\nProject created: {dest}  (template v{version})")
     print("Next:")
     print("  1. Pin the folder for offline availability in your sync client (R9).")
     print("  2. Drop the raw inputs you already have into 01_SoT/.")
