@@ -20,7 +20,9 @@ any work in this project:
 4. Check `00_AI_context/WORKLOG.md` for the latest decisions and open items.
 5. Consult `00_AI_context/INDEX.md` before searching the tree — every file is
    listed there with a one-line description. To search *inside* the documents,
-   grep `02_derivatives/_extracted/`, not the binaries.
+   grep `02_derivatives/_extracted/`. Then open the source document in
+   `01_SoT/` to read anything you intend to rely on: the extraction is an index
+   for finding things, not a substitute for the document (R10).
 
 Key invariants (full text in README.md):
 

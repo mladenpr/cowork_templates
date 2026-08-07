@@ -142,6 +142,16 @@ properties a plain file tree does not express:
   into `02_derivatives/_extracted/` as one markdown file per document, so the
   project is greppable. Run it after every ingestion. It is a derivative in the
   full R5 sense — regenerable, deletable, never edited by hand.
+- **The text layer is an index, not a substitute.** Use it to find things:
+  which document mentions a term, which clause covers a topic, what changed
+  between revisions. Then open the source. Any figure, date or quotation that
+  enters a deliverable is read from the document in `01_SoT/`, not from the
+  extraction — because extraction is lossy in ways that do not announce
+  themselves. It drops layout, page numbers, images and drawings; it flattens
+  multi-column PDFs; it *reconstructs* Word list numbering and Excel dates
+  rather than reading them, which is right in the ordinary case and wrong in
+  the exotic one. A document flagged `list-numbering-reconstructed` has clause
+  numbers that were computed, not read.
 - **Record document condition in the context md** (R2): whether a PDF has a
   text layer or needs OCR, whether a Word file carries tracked changes or
   comments, whether the file is rights-managed. These are expensive to

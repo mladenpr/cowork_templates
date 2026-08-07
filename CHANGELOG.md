@@ -27,7 +27,11 @@ file bridge.
 - **R10 — Document handling**: never re-save or clean up a source document;
   keep the extracted text layer current; record document condition (text layer
   vs scan, tracked changes, comments, protection) in the context md; issue PDFs
-  and keep sources beside them.
+  and keep sources beside them. The text layer is explicitly **an index, not a
+  substitute** — find things in the extraction, read them in the source, and
+  never let a figure reach a deliverable without checking it against the
+  document. Every extracted file opens with a banner saying so, since that is
+  what an agent actually reads.
 - `sot/_TEMPLATE.md` gains a "Document condition" section covering those
   properties, plus the sender's own document reference and revision.
 - `update_index.py` now warns about suspected sync-conflict copies (keyed on
@@ -47,6 +51,27 @@ file bridge.
 - `update_index.py`: Office save-temps (`~WRL0001.tmp`), LibreOffice locks and
   `.tmp` files are skipped. Only `~$` owner files were skipped before, so the
   rest were reported NEW and would have been ingested into `01_SoT/`.
+- `extract_text.py`: six extraction losses found by testing against a document
+  with the features a real specification has —
+  - **Word list numbering was dropped entirely.** Word stores the scheme, not
+    the numbers, so `1.` / `2.` / `2.1` simply vanished. In a specification
+    that is how the document is referenced. Numbering is now reconstructed from
+    `numbering.xml` for the ordinary case and the document is flagged
+    `list-numbering-reconstructed`, since restarts and overrides will be wrong.
+  - **Headers and footers were not read at all** — which is where a controlled
+    document carries its number, revision and confidentiality marking.
+  - **Footnotes and endnotes were not read at all**, and their reference marks
+    were invisible in the body. Both are now extracted, with `[^n]` markers
+    inline.
+  - **Nested tables were flattened** into the containing cell, merging the
+    inner table's values into one run-on string.
+  - **Excel dates stayed as serial numbers.** Number formats are now resolved
+    from `styles.xml` (built-in and custom) and serials converted to ISO dates,
+    including Excel's fictional 1900-02-29.
+  - **Merged cell ranges were unreported**, leaving header rows looking
+    misaligned against the source.
+- `extract_text.py`: paragraphs inside `w:sdt` content controls were invisible.
+  Templates and forms wrap blocks in them, so whole sections could be missing.
 
 ### Changed
 

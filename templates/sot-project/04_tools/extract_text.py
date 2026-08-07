@@ -56,7 +56,7 @@ import os
 import re
 import sys
 import zipfile
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from xml.etree import ElementTree as ET
 
 SOT_DIR = "01_SoT"
@@ -137,6 +137,123 @@ class Result:
 # Word
 # --------------------------------------------------------------------------
 
+ROMAN = [(1000, "m"), (900, "cm"), (500, "d"), (400, "cd"), (100, "c"),
+         (90, "xc"), (50, "l"), (40, "xl"), (10, "x"), (9, "ix"), (5, "v"),
+         (4, "iv"), (1, "i")]
+
+
+def roman(n):
+    out = []
+    for value, sym in ROMAN:
+        while n >= value:
+            out.append(sym)
+            n -= value
+    return "".join(out)
+
+
+def format_counter(n, fmt):
+    if fmt == "lowerLetter":
+        return chr(ord("a") + (n - 1) % 26)
+    if fmt == "upperLetter":
+        return chr(ord("A") + (n - 1) % 26)
+    if fmt == "lowerRoman":
+        return roman(n)
+    if fmt == "upperRoman":
+        return roman(n).upper()
+    return str(n)
+
+
+def load_numbering(zf):
+    """{numId: {ilvl: {fmt, text, start}}} from word/numbering.xml."""
+    root = read_xml(zf, "word/numbering.xml")
+    if root is None:
+        return {}
+    abstract = {}
+    for an in root.findall(f"{W}abstractNum"):
+        levels = {}
+        for lvl in an.findall(f"{W}lvl"):
+            try:
+                ilvl = int(lvl.get(f"{W}ilvl", "0"))
+            except ValueError:
+                continue
+            fmt = lvl.find(f"{W}numFmt")
+            text = lvl.find(f"{W}lvlText")
+            start = lvl.find(f"{W}start")
+            levels[ilvl] = {
+                "fmt": fmt.get(f"{W}val", "decimal") if fmt is not None else "decimal",
+                "text": text.get(f"{W}val", "%1.") if text is not None else "%1.",
+                "start": int(start.get(f"{W}val", "1")) if start is not None else 1,
+            }
+        abstract[an.get(f"{W}abstractNumId")] = levels
+    nums = {}
+    for n in root.findall(f"{W}num"):
+        ref = n.find(f"{W}abstractNumId")
+        if ref is not None:
+            nums[n.get(f"{W}numId")] = abstract.get(ref.get(f"{W}val"), {})
+    return nums
+
+
+def list_marker(p, numbering, counters):
+    """Reconstruct a paragraph's visible list number, or None.
+
+    Word stores the numbering *scheme*, not the numbers — they are computed
+    when the document is rendered. Dropping them loses how a specification is
+    referenced ("clause 2.1"), so they are rebuilt here for the ordinary case:
+    sequential decimal/letter/roman lists with no restarts or per-instance
+    overrides. Anything more exotic will be wrong, which is why a document
+    using this is flagged for the context md rather than trusted silently.
+    """
+    pr = p.find(f"{W}pPr")
+    if pr is None:
+        return None
+    num_pr = pr.find(f"{W}numPr")
+    if num_pr is None:
+        return None
+    nid_el = num_pr.find(f"{W}numId")
+    if nid_el is None:
+        return None
+    nid = nid_el.get(f"{W}val")
+    ilvl_el = num_pr.find(f"{W}ilvl")
+    try:
+        ilvl = int(ilvl_el.get(f"{W}val", "0")) if ilvl_el is not None else 0
+    except ValueError:
+        ilvl = 0
+    levels = numbering.get(nid)
+    if not levels or ilvl not in levels:
+        return None
+    spec = levels[ilvl]
+    if spec["fmt"] in ("bullet", "none"):
+        return "-"
+    counters[(nid, ilvl)] = counters.get((nid, ilvl), spec["start"] - 1) + 1
+    for key in [k for k in counters if k[0] == nid and k[1] > ilvl]:
+        del counters[key]
+    text = spec["text"]
+    for level in range(9):
+        token = f"%{level + 1}"
+        if token in text:
+            lvl_spec = levels.get(level, spec)
+            count = counters.get((nid, level), lvl_spec["start"])
+            text = text.replace(token, format_counter(count, lvl_spec["fmt"]))
+    return text
+
+
+def iter_blocks(container):
+    """Yield ('p'|'tbl', element) for a container's direct block children.
+
+    Descends into w:sdt content controls, which templates and forms wrap
+    blocks in — paragraphs inside one would otherwise be invisible.
+    """
+    for child in container:
+        if child.tag == f"{W}p":
+            yield "p", child
+        elif child.tag == f"{W}tbl":
+            yield "tbl", child
+        elif child.tag == f"{W}sdt":
+            content = child.find(f"{W}sdtContent")
+            if content is not None:
+                yield from iter_blocks(content)
+
+
 def para_segments(p):
     """Text of a paragraph as (kind, text) segments, in document order.
 
@@ -154,6 +271,10 @@ def para_segments(p):
             segs.append(("t", "\t"))
         elif node.tag in (f"{W}br", f"{W}cr"):
             segs.append(("t", " "))
+        elif node.tag == f"{W}footnoteReference":
+            segs.append(("t", f"[^{node.get(f'{W}id', '?')}]"))
+        elif node.tag == f"{W}endnoteReference":
+            segs.append(("t", f"[^e{node.get(f'{W}id', '?')}]"))
     merged = []
     for kind, text in segs:
         if merged and merged[-1][0] == kind:
@@ -199,12 +320,32 @@ def heading_level(p):
     return 0
 
 
+def cell_text(tc):
+    """Text of one table cell, keeping a nested table visible as a table.
+
+    Collecting every descendant paragraph instead would silently merge an
+    inner table's cells into the outer one, which reads as a single run-on
+    value and loses the structure entirely.
+    """
+    parts = []
+    for kind, el in iter_blocks(tc):
+        if kind == "p":
+            text = para_text(el)
+            if text:
+                parts.append(text)
+        else:
+            rows = [" / ".join(cell_text(inner) for inner in tr.findall(f"{W}tc"))
+                    for tr in el.findall(f"{W}tr")]
+            if rows:
+                parts.append("[nested table: " + " ; ".join(rows) + "]")
+    return squeeze(" ".join(parts))
+
+
 def table_markdown(tbl):
     rows = []
     for tr in tbl.findall(f"{W}tr"):
-        cells = [squeeze(" ".join(para_text(p) for p in tc.iter(f"{W}p")))
-                 for tc in tr.findall(f"{W}tc")]
-        rows.append([c.replace("|", "\\|") for c in cells])
+        rows.append([cell_text(tc).replace("|", "\\|")
+                     for tc in tr.findall(f"{W}tc")])
     if not rows:
         return []
     width = max(len(r) for r in rows)
@@ -250,19 +391,73 @@ def extract_docx(path, res):
             res.meta["tracked_insertions"] = ins
             res.meta["tracked_deletions"] = dele
 
-        for child in body:
-            if child.tag == f"{W}p":
-                text = para_text(child)
+        # Headers and footers carry the document number, revision and any
+        # confidentiality marking — in a controlled document that is where
+        # the identity lives, not in the body.
+        chrome = []
+        for name in sorted(n for n in zf.namelist()
+                           if re.match(r"word/(header|footer)\d*\.xml$", n)):
+            part = read_xml(zf, name)
+            if part is None:
+                continue
+            text = squeeze(" ".join(para_text(p) for p in part.iter(f"{W}p")))
+            if text and text not in [t for _, t in chrome]:
+                chrome.append((name.split("/")[-1], text))
+        if chrome:
+            res.line("## Header / footer")
+            res.line()
+            for name, text in chrome:
+                res.line(f"- `{name}`: {text}")
+            res.line()
+
+        numbering = load_numbering(zf)
+        counters = {}
+        numbered = False
+        for kind, el in iter_blocks(body):
+            if kind == "p":
+                text = para_text(el)
+                marker = list_marker(el, numbering, counters)
                 if not text:
                     continue
-                level = heading_level(child)
+                if marker and marker != "-":
+                    numbered = True
+                    text = f"{marker} {text}"
+                elif marker:
+                    text = f"- {text}"
+                level = heading_level(el)
                 res.line(("#" * level + " " + text) if level else text)
                 res.line()
-            elif child.tag == f"{W}tbl":
-                lines = table_markdown(child)
+            else:
+                lines = table_markdown(el)
                 if lines:
                     res.body.extend(lines)
                     res.line()
+        if numbered:
+            res.flag("list-numbering-reconstructed")
+
+        for part_name, label, prefix in (
+                ("word/footnotes.xml", "Footnotes", ""),
+                ("word/endnotes.xml", "Endnotes", "e")):
+            part = read_xml(zf, part_name)
+            if part is None:
+                continue
+            tag = f"{W}footnote" if prefix == "" else f"{W}endnote"
+            items = [n for n in part.findall(tag)
+                     if n.get(f"{W}type") in (None, "normal")]
+            notes = []
+            for note in items:
+                text = squeeze(" ".join(para_text(p) for p in note.iter(f"{W}p")))
+                if text:
+                    notes.append((note.get(f"{W}id", "?"), text))
+            if not notes:
+                continue
+            res.flag(label.lower())
+            res.meta[label.lower()] = len(notes)
+            res.line(f"## {label}")
+            res.line()
+            for note_id, text in notes:
+                res.line(f"[^{prefix}{note_id}]: {text}")
+            res.line()
 
         comments = read_xml(zf, "word/comments.xml")
         if comments is not None:
@@ -324,7 +519,69 @@ def col_index(ref):
     return n - 1
 
 
-def cell_value(c, strings):
+# Excel's built-in date and date-time number formats.
+BUILTIN_DATE_IDS = (set(range(14, 23)) | set(range(27, 37))
+                    | {45, 46, 47} | set(range(50, 59)))
+
+
+def load_number_formats(zf):
+    """(numFmtId per cell-style index, {numFmtId: formatCode})."""
+    root = read_xml(zf, "xl/styles.xml")
+    if root is None:
+        return [], {}
+    custom = {}
+    fmts = root.find(f"{S}numFmts")
+    if fmts is not None:
+        for nf in fmts.findall(f"{S}numFmt"):
+            try:
+                custom[int(nf.get("numFmtId"))] = nf.get("formatCode", "")
+            except (TypeError, ValueError):
+                pass
+    xfs = []
+    cell_xfs = root.find(f"{S}cellXfs")
+    if cell_xfs is not None:
+        for xf in cell_xfs.findall(f"{S}xf"):
+            try:
+                xfs.append(int(xf.get("numFmtId", "0")))
+            except ValueError:
+                xfs.append(0)
+    return xfs, custom
+
+
+def is_date_style(style_index, xfs, custom):
+    if style_index is None:
+        return False
+    try:
+        idx = int(style_index)
+    except ValueError:
+        return False
+    if idx >= len(xfs):
+        return False
+    fmt_id = xfs[idx]
+    if fmt_id in BUILTIN_DATE_IDS:
+        return True
+    # Strip literals and colour/condition brackets before looking for date
+    # placeholders, so a format like `#,##0 "days"` is not mistaken for one.
+    code = re.sub(r'\[[^\]]*\]|"[^"]*"', "", custom.get(fmt_id, ""))
+    return bool(re.search(r"[yd]", code, re.I))
+
+
+def excel_date(raw):
+    """Excel serial → ISO date. Serial 60 is Excel's fictional 1900-02-29."""
+    try:
+        serial = float(raw)
+    except (TypeError, ValueError):
+        return None
+    if serial <= 0:
+        return None
+    base = datetime(1899, 12, 30) if serial > 59 else datetime(1899, 12, 31)
+    dt = base + timedelta(days=serial)
+    if abs(serial - round(serial)) < 1e-9:
+        return dt.strftime("%Y-%m-%d")
+    return dt.strftime("%Y-%m-%d %H:%M")
+
+
+def cell_value(c, strings, xfs=(), custom=None):
     kind = c.get("t", "n")
     if kind == "inlineStr":
         node = c.find(f"{S}is")
@@ -338,6 +595,10 @@ def cell_value(c, strings):
             return ""
     if kind == "b":
         return "TRUE" if raw == "1" else "FALSE"
+    if kind == "n" and raw and is_date_style(c.get("s"), xfs, custom or {}):
+        as_date = excel_date(raw)
+        if as_date:
+            return as_date
     return squeeze(raw)
 
 
@@ -345,10 +606,11 @@ def extract_xlsx(path, res, max_rows):
     with zipfile.ZipFile(path) as zf:
         res.meta.update(core_properties(zf))
         strings = shared_strings(zf)
+        xfs, custom = load_number_formats(zf)
         sheets = sheet_targets(zf)
         res.meta["sheets"] = len(sheets)
         formulas = 0
-        dates_possible = False
+        styled_without_formats = False
 
         for name, part, hidden in sheets:
             root = read_xml(zf, part)
@@ -362,13 +624,20 @@ def extract_xlsx(path, res, max_rows):
             if dim is not None and dim.get("ref"):
                 res.line(f"Used range: `{dim.get('ref')}`")
                 res.line()
+            # A merged range means the value sits in the top-left cell and the
+            # rest are empty — without this the table below looks misaligned.
+            merges = [mc.get("ref") for mc in root.iter(f"{S}mergeCell")
+                      if mc.get("ref")]
+            if merges:
+                res.line(f"Merged ranges: {', '.join(merges)}")
+                res.line()
 
             grid, sheet_formulas = [], []
             for row in root.iter(f"{S}row"):
                 cells = {}
                 for c in row.findall(f"{S}c"):
                     idx = col_index(c.get("r", ""))
-                    value = cell_value(c, strings)
+                    value = cell_value(c, strings, xfs, custom)
                     f = c.find(f"{S}f")
                     if f is not None:
                         formulas += 1
@@ -376,8 +645,8 @@ def extract_xlsx(path, res, max_rows):
                             (c.get("r", "?"), squeeze(f.text or ""), value))
                     if value != "":
                         cells[idx] = value
-                        if c.get("t", "n") == "n" and c.get("s") and value.isdigit():
-                            dates_possible = True
+                        if c.get("s") and not xfs:
+                            styled_without_formats = True
                 if cells:
                     width = max(cells) + 1
                     grid.append([cells.get(i, "") for i in range(width)])
@@ -415,8 +684,8 @@ def extract_xlsx(path, res, max_rows):
 
         if formulas:
             res.meta["formulas"] = formulas
-        if dates_possible:
-            res.flag("dates-as-serial-numbers")
+        if styled_without_formats:
+            res.flag("number-formats-unavailable-dates-may-be-serials")
 
 
 # --------------------------------------------------------------------------
@@ -603,6 +872,13 @@ def front_matter(rel, st, res):
     if res.flags:
         lines.append("flags: " + ", ".join(res.flags))
     lines.append("---")
+    lines.append("")
+    lines.append(f"> Derived copy of `{rel}` — an index for finding things, not "
+                 f"a substitute for the document. Extraction drops layout, page "
+                 f"numbers, images and drawings, and reconstructs some features "
+                 f"(list numbering, dates) rather than reading them. Verify any "
+                 f"figure or quotation against the source before it enters a "
+                 f"deliverable.")
     return lines
 
 

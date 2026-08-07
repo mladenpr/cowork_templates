@@ -214,6 +214,38 @@ rebuild is one command. The point is not that extraction is clever; it is that
 the searchable form of the project should be a *file*, not something an agent
 reconstructs from scratch on every session.
 
+### The failure the text layer introduces
+
+Every index carries the risk that it gets mistaken for the thing it indexes,
+and here that risk is real: a session that greps the extraction and quotes what
+it finds has silently substituted a lossy copy for the document. So the rule
+has a second half — **find it in the extraction, read it in the source** — and
+the extracted files each open with a banner saying so, because that banner is
+what the agent actually reads.
+
+What extraction cannot carry is worth knowing concretely, since none of it
+announces itself in the output:
+
+- **Layout and pagination.** Page numbers are gone, so a citation of the form
+  "page 12" cannot be resolved from the extraction. Multi-column PDFs
+  interleave. Tables in PDFs come out as prose.
+- **Anything that is not text.** Drawings, figures, stamps, signatures,
+  annotations. A drawing sheet extracts to its title block and nothing that
+  matters.
+- **Reconstructed values.** Word stores a list's *scheme*, not its numbers, and
+  Excel stores a date as a serial number with a display format. Both are
+  rebuilt here — correctly for the ordinary case, wrongly for restarts,
+  numbering overrides and unusual format codes. A reconstructed clause number
+  is exactly the kind of error that looks authoritative, which is why documents
+  using it are flagged for the context md rather than trusted quietly.
+- **Fidelity of the PDF reader.** Word, Excel and PowerPoint are parsed from
+  their own XML and are near-exact. PDFs go through `pypdf`, whose text output
+  is adequate for search and unreliable for structure.
+
+None of this is an argument against the layer. It is an argument for what the
+layer is: the fastest way to find out *where* something is, and never the last
+word on *what* it says.
+
 The second half of the rule is about condition. Three properties decide whether
 a document can be used at all, and each is expensive to rediscover and cheap to
 write down once:
