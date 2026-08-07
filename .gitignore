@@ -7,8 +7,11 @@ desktop.ini
 Thumbs.db
 Icon?
 
-# Office lock files
+# Office lock files and save-temps
 ~$*
+~WRL*.tmp
+*.tmp
+.~lock.*#
 
 # Python
 __pycache__/
