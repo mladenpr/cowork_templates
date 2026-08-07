@@ -1,70 +1,113 @@
 # Running this with Claude Cowork
 
-Practical mechanics of working on a synced project folder through an agent's
-device bridge. Written against Claude Cowork; most of it applies to any agent
-that reaches your disk through a bridge rather than running on it.
+Practical mechanics of working on a synced project folder with an agent.
+Written against Claude Cowork running **locally**, which is what the template
+now assumes; the cloud/bridge mode is covered at the end, because its
+constraints are different in ways that matter.
 
-## Where the session actually runs
+## Where the session runs
 
-A Cowork task runs either **in the cloud** (an isolated Linux container) or **on
-your computer**, chosen when the task starts. It cannot be moved mid-session.
+A Cowork task runs either **on your computer** or **in the cloud**, chosen when
+the task starts. It cannot be moved mid-session.
 
-In cloud mode the session does not have your files. It reaches them through a
-bridge: it lists your connected folder, *stages* copies of files into its own
-workspace, works on the copies, and writes results back by committing them to an
-absolute path on your disk. Two consequences follow, and both bite eventually.
+Running locally, the session has your actual filesystem. The project folder is
+a real path, the shell is a real shell on your machine, and `04_tools/` scripts
+run against the real tree rather than against copies. There is no staging step,
+so there is no snapshot to go stale — the thing the session reads is the thing
+on disk.
 
-**Staged copies are snapshots.** A file staged twenty minutes ago does not
-reflect an edit you made since. Before deriving anything from an older staged
-copy, re-check it against the device. This is the source of the "the AI is
-working from the wrong version" experience.
+This is the right mode for this template. The session-start scan (R4) is the
+mechanism the whole pattern rests on, and it only works when the agent can
+actually run `update_index.py` over the actual folder.
 
-**Shell commands run in the container, not on your machine.** Anything that
-needs to run *against* your files either operates on staged copies in the cloud
-workspace, or runs through the bridge's own shell — which has no network access.
-Install-anything work happens in the container; file-in-place work happens on
-the device. Do not mix the two filesystems for the same file.
+## What you give up by running locally
 
-## Cloud placeholders will stop a session dead
+The bridge used to be a safety property, not just a limitation. It could not
+delete, could not overwrite in place, and could not touch anything outside the
+folder you connected. Locally, none of that is true: `rm` works, overwrite
+works, and R1's immutability and R8's no-deletion rule are conventions the
+session follows because CLAUDE.md tells it to.
+
+So the rules stop being descriptions of the environment and become the actual
+control. That is worth saying out loud, because a rule that reads like a
+statement of fact gets quietly dropped the moment the fact changes. R8 is now
+the only thing between a misread instruction and an unrecoverable loss.
+
+Two things reduce the blast radius without getting in the way:
+
+- **OneDrive keeps version history and a recycle bin.** Both have retention
+  limits, and neither is a substitute for not deleting things. Know how to
+  reach them before you need them: right-click a file → Version History.
+- **`_to_delete/` is cheap.** Emptying it takes ten seconds a month. That is
+  the whole cost of the rule.
+
+## Cloud placeholders
 
 OneDrive Files On-Demand, Dropbox Smart Sync and iCloud Optimise Storage all
-show a file in Finder whether or not its bytes are on disk. Reading a dehydrated
-file through the bridge fails — OneDrive reports it as `Resource deadlock
-avoided`, which is accurate and completely unhelpful.
+show a file in Finder or Explorer whether or not its bytes are on disk.
 
-The symptom: the agent says it cannot read a file that you can see, and possibly
-that it "is a cloud placeholder (not downloaded)". The fix: right-click the
-project folder in Finder → **Always Keep on This Device** (OneDrive), **Make
-Available Offline** (Dropbox), **Keep Downloaded** (iCloud), wait for the solid
-green checks, and tell the agent to retry.
+Locally this is no longer the hard failure it was through the bridge — a normal
+process reading a dehydrated file triggers a download and gets the content. But
+it is still worth pinning the folder ("Always Keep on This Device"), for two
+reasons: a session-start scan across an unpinned project stalls while gigabytes
+hydrate one file at a time, and offline the reads fail outright.
 
-Do this once, when the project folder is created. It is rule R9 for a reason.
+Do it once, when the project folder is created. It is rule R9.
 
-## Getting files back onto your disk
+## Documents open in Word or Excel
 
-Files the agent produces live in its workspace until they are explicitly
-committed to a path on your machine. A file that was only *shown* to you in the
-conversation is downloadable from the chat but is not on your disk — it will not
-appear in the project folder, and the next session's manifest scan will not see
-it.
+Office holds a lock on an open document and drops a `~$name.docx` beside it.
+A locked file cannot be rewritten, and on Windows the error is unhelpful.
 
-If something the agent made should be in `02_derivatives/` or
-`03_deliverables/`, say so explicitly, and confirm afterwards with a fresh
-listing of the folder. Then regenerate the index.
+If a write fails, check whether you have the file open. The failure mode to
+watch for is an agent working around the lock by writing to a slightly
+different filename — that is how you end up with two versions of a deliverable
+and no idea which is current. `update_index.py` skips `~$` files so they never
+reach the manifest.
 
-There are size ceilings on the write-back path — on the order of tens of MB per
-file and around 100 MB per batch. Large deliverables may need to come down
-through the chat download instead, and be filed by hand.
+## The Microsoft 365 connector
 
-## Deletion
+If you have the Microsoft 365 connector enabled, the same OneDrive and
+SharePoint content is reachable a second way — without your machine being
+awake, which is genuinely useful.
 
-The bridge cannot delete. `rm` on a mounted file fails with `Operation not
-permitted`, by design. That is exactly rule R8: cleanup means `mv` into
-`_to_delete/` and a report of what moved, and you empty the folder yourself.
+It is not a way to work on this project. The connector has no shell, so
+`update_index.py` cannot run, so the session-start scan does not happen and
+nothing notices what changed. Worse, it *can* delete, move, rename and
+overwrite items, which R8 forbids by whatever route.
 
-Keep `_to_delete/` out of the manifest scan — the template's `update_index.py`
-already skips it — otherwise every cleanup produces a wall of NEW entries at the
-next session start.
+Where it earns its place is fetching inputs that are not on your disk in the
+first place: an attachment sitting in Outlook, a document in a SharePoint
+library you have not synced, a file someone dropped in Teams. Pull it down,
+then ingest it into `01_SoT/` through the normal R3 route, locally, with its
+context md and an index regeneration. The connector gets it to the door; the
+repository rules take over there.
+
+## Getting documents into the project
+
+Anything that arrives — chat upload, email attachment, a folder someone shared
+— goes through R3: into `01_SoT/`, context md written, `extract_text.py` run,
+INDEX and MANIFEST regenerated. The point of making it a single named step is
+that otherwise files get analysed where they landed and the project grows a
+second, undocumented source of truth.
+
+Files an agent produces are written directly to the path you name. Say where
+things go — `02_derivatives/` or `03_deliverables/` — and confirm afterwards
+with a fresh listing. Then regenerate the index.
+
+## The text layer is what makes documents searchable
+
+`02_derivatives/_extracted/` holds one markdown file per document in `01_SoT/`,
+built by `04_tools/extract_text.py`. Without it, "which document says X" is
+unanswerable without opening every file, and every session that needs a figure
+reparses a binary to get it.
+
+Run `extract_text.py --report` when you want to know what state the SoT is in:
+what has been extracted, what is stale, what is a scan needing OCR, what is
+rights-managed and unreadable. It is the fastest way to find out that the
+document you were about to rely on cannot actually be read.
+
+PDFs need `pip install pypdf`. Word, Excel and PowerPoint need nothing.
 
 ## A session that behaves
 
@@ -73,10 +116,10 @@ Open a task on the project folder and give it one line:
 > Read CLAUDE.md and run the session-start scan.
 
 A well-behaved session then, without further prompting: reads `PROJECT.md` and
-`README.md`, runs `update_index.py --diff`, reports NEW / CHANGED / MISSING,
-ingests any new raw inputs into `01_SoT/` with their context md, regenerates
-INDEX and MANIFEST, reads the last few WORKLOG entries, and only then asks what
-you want done.
+`README.md`, runs `update_index.py --diff`, reports NEW / CHANGED / MISSING and
+any conflict or bad-name warnings, ingests new raw inputs into `01_SoT/` with
+their context md, runs `extract_text.py`, regenerates INDEX and MANIFEST, reads
+the last few WORKLOG entries, and only then asks what you want done.
 
 If it starts working before it has scanned, stop it. The scan is the only thing
 standing between the session and a stale picture of the project.
@@ -92,3 +135,25 @@ you ask for it, invisible to colleagues entirely, and lost if the project moves
 to a different tool or a different person. The folder is the durable record.
 Anything that would matter to a stranger picking the project up belongs in
 `PROJECT.md`, a context md, or the WORKLOG — memory holds the rest.
+
+## If you run in the cloud instead
+
+Cloud mode reaches your disk through a bridge: it lists the connected folder,
+*stages* copies into its own workspace, works on the copies, and writes results
+back to an absolute path on your machine. Three consequences, all of which the
+local mode removes:
+
+- **Staged copies are snapshots.** A file staged twenty minutes ago does not
+  reflect an edit you made since. This is the source of the "the AI is working
+  from the wrong version" experience.
+- **Shell commands run in the container, not on your machine**, so
+  `update_index.py` does not straightforwardly run against the real folder.
+- **Write-back has size ceilings** — on the order of tens of MB per file and
+  around 100 MB per batch. Large deliverables may need to come down through the
+  chat download and be filed by hand. A file that was only *shown* to you in
+  conversation is not on your disk and the next scan will not see it.
+
+Cloud mode also cannot delete: `rm` on a mounted file fails with `Operation not
+permitted`. And a dehydrated placeholder is a hard error rather than a slow
+read — OneDrive surfaces it as `Resource deadlock avoided`, which is accurate
+and completely unhelpful. Pinning the folder removes that failure entirely.

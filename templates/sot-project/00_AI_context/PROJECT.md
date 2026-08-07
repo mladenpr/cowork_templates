@@ -27,16 +27,32 @@
 ## Conventions that matter
 
 > The non-obvious rules a session must respect to avoid producing something
-> wrong: units and currency, tax treatment, what is included vs excluded vs
-> quoted separately, naming and revision conventions, rounding, which figures
-> are headline and which are internal. Anything you have had to correct twice
-> belongs here.
+> wrong. Anything you have had to correct twice belongs here.
+
+- **Units and unit system:** which units for each quantity; SI or otherwise;
+  where mixed units appear in received documents and which one governs.
+- **Standards and codes:** which apply, in which edition and national annex.
+  An analysis against the wrong edition is wrong in a way that looks right.
+- **Rounding and significant figures:** what is reported to what precision, and
+  where rounding happens — at the line, at the subtotal, or only at the total.
+- **Sign and coordinate conventions:** datum, chainage direction, what counts
+  as positive, which coordinate system.
+- **Naming and revision conventions:** how documents and drawings are numbered,
+  how revisions are lettered, what "issued" means here.
+- **Commercial terms**, where the project has them: currency, tax treatment,
+  what is Included vs Excluded vs Rate-Only, whether preliminaries are priced
+  separately or blended.
+- **Language:** the language deliverables are issued in, and whether received
+  documents are in another one.
 
 ## Internal position — not for external release
 
-> Cost basis, margin, reserves, walk-away limits, negotiation floors — whatever
-> the internal-only counterpart of the external position is. Mark it clearly so
-> no session pastes it into a client-facing document.
+> Delete this section if the project has no internal/external split.
+>
+> For bids, claims and negotiations: cost basis, margin, reserves, walk-away
+> limits, negotiation floors. Mark it clearly so no session pastes it into a
+> client-facing document, and keep the documents themselves out of anything
+> that gets transmitted.
 
 ## Current objective
 

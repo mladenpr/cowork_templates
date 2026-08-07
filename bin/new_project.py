@@ -87,14 +87,20 @@ def main():
                 substitute(full, mapping)
 
     index = os.path.join(dest, "04_tools", "update_index.py")
-    os.chmod(index, 0o755)
-    subprocess.run([sys.executable, index, dest, "--name", name], check=True)
+    for script in ("update_index.py", "extract_text.py"):
+        path = os.path.join(dest, "04_tools", script)
+        if os.path.exists(path):
+            os.chmod(path, 0o755)
+    subprocess.run([sys.executable, index, dest, "--name", name, "--hash"],
+                   check=True)
 
     print(f"\nProject created: {dest}")
     print("Next:")
     print("  1. Pin the folder for offline availability in your sync client (R9).")
     print("  2. Drop the raw inputs you already have into 01_SoT/.")
-    print("  3. Open a Cowork session on the folder and say: "
+    print("  3. Run 04_tools/extract_text.py to build the searchable text layer")
+    print("     (PDFs also need `pip install pypdf`).")
+    print("  4. Open a Cowork session on the folder and say: "
           "'read CLAUDE.md and run the session-start scan'.")
     return 0
 
