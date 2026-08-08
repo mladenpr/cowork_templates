@@ -16,7 +16,7 @@ scan that forces it to notice what changed since last time.
 
 | Template | Use it for |
 |---|---|
-| [`sot-project`](templates/sot-project) | Any project that exchanges documents with another party: inputs arrive, work happens, documents are issued. Currently the only template. |
+| [`cowork-project`](templates/cowork-project) | Any project that exchanges documents with another party: inputs arrive, work happens, documents are issued. Currently the only template. |
 
 ## The pattern
 
@@ -73,7 +73,7 @@ is not yours to remember. What this replaces — quietly renaming a draft — le
 the project unable to say what was sent, to whom, or under what cover.
 
 The ten rules that formalise this are in
-[`templates/sot-project/README.md`](templates/sot-project/README.md).
+[`templates/cowork-project/README.md`](templates/cowork-project/README.md).
 
 ## Quickstart
 
@@ -139,7 +139,7 @@ v2.
 
 A project is a copy, not a link. Nothing propagates once it is created.
 
-Within a major version, copying `templates/sot-project/04_tools/*.py` over the
+Within a major version, copying `templates/cowork-project/04_tools/*.py` over the
 project's copies and re-running them is safe — the scripts hold no project
 state. **Across v1 → v2 it is not**: the v2 scripts look for `01_basis/` and
 `02_exchange/` and will not find a v1 project's directories.

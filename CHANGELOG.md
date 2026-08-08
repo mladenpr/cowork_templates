@@ -29,6 +29,12 @@ mid-engagement. Finish those as they are; start new ones on v2.
 
 ### Changed — the schema
 
+The template directory is renamed `templates/sot-project/` →
+`templates/cowork-project/`. It was named for the concept it was built around,
+and that concept is gone: SoT is now one zone among three rather than the
+organising idea. Earlier changelog entries keep the old path, because that is
+what it was called at the time.
+
 ```
 01_SoT/            →  01_basis/              reference material only
 02_derivatives/    →  03_working/            drafts/, analysis/, _extracted/

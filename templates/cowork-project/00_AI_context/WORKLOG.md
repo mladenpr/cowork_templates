@@ -11,7 +11,7 @@ so the entry stays resolvable later.
 
 ## {{DATE}} — Repository created
 
-- Structure instantiated from the `sot-project` template **v{{TEMPLATE_VERSION}}**:
+- Structure instantiated from the `cowork-project` template **v{{TEMPLATE_VERSION}}**:
   `00_AI_context/` (PROJECT, INDEX, MANIFEST, WORKLOG, datasets/), `01_basis/`,
   `02_exchange/` (received/, issued/, LOG.md), `03_working/` (drafts/,
   analysis/, _extracted/), `04_tools/`, `05_temp/`, `_to_delete/`.
