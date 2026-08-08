@@ -25,6 +25,10 @@ Behavior:
   they survive; new files get an empty description to be filled in.
 - --diff: prints NEW / CHANGED / MISSING files relative to MANIFEST.json and
   exits 1 if anything differs (0 if clean). Used by the session-start scan.
+- Movement inside a frozen zone (01_basis/, 02_exchange/) is reported first and
+  separately. A file that changed or vanished there means either a rule was
+  broken or the sync client did something, and neither is for a session to
+  resolve. The same event in 03_working/ is just a draft being drafted.
 - Both modes also print WARNINGS: suspected sync-conflict copies, and names
   OneDrive/SharePoint will refuse to sync. Warnings never change the exit code
   on their own — they are for the human to resolve.
@@ -61,12 +65,21 @@ SKIP_DIRS = {"_to_delete", ".git"}
 SKIP_FILES = {".DS_Store", "Icon\r", "desktop.ini", "Thumbs.db"}
 # Office leaves owner-lock files (~$name.docx) and save-temps (~WRL0001.tmp)
 # behind; LibreOffice leaves .~lock.name#. None of them are project content,
-# and all of them would otherwise be reported NEW and ingested into 01_SoT.
+# and all would otherwise be reported NEW and ingested into a frozen zone.
 SKIP_PREFIXES = ("~", ".~lock.")
 SKIP_SUFFIXES = (".tmp", ".laccdb", ".partial", ".crdownload")
 # Generated meta-files exclude themselves — otherwise every regeneration
 # changes their mtimes and the next --diff is never clean.
 SKIP_PATHS = {"00_AI_context/INDEX.md", "00_AI_context/MANIFEST.json"}
+
+# Frozen zones (R1). A file that changes or vanishes in one of these is an
+# alarm; the same event in 03_working/ is a draft being drafted.
+FROZEN_DIRS = ("01_basis/", "02_exchange/")
+
+
+def frozen(rel):
+    return rel.startswith(FROZEN_DIRS)
+
 
 # Names SharePoint/OneDrive refuse to sync. Characters first, then the
 # reserved device names inherited from DOS, then structural rules.
@@ -223,7 +236,8 @@ def warnings_for(paths, device):
 
 def print_warnings(conflicts, names):
     if conflicts:
-        print("\nSuspected sync-conflict copies — do NOT ingest into 01_SoT "
+        print("\nSuspected sync-conflict copies — do NOT ingest into a "
+              "frozen zone "
               "until you have decided which copy is real:")
         for rel, reason in conflicts:
             print(f"  CONFLICT? {rel}  ({reason})")
@@ -248,18 +262,36 @@ def diff(root, args):
     added = sorted(set(new) - set(old))
     missing = sorted(set(old) - set(new))
     changed = sorted(p for p in set(old) & set(new) if differs(old[p], new[p]))
+
+    # Report frozen-zone movement first and by itself: it means either a rule
+    # was broken or the sync client did something, and neither is for a session
+    # to resolve. Everything else is routine.
+    frozen_changed = [p for p in changed if frozen(p)]
+    frozen_missing = [p for p in missing if frozen(p)]
+    if frozen_changed or frozen_missing:
+        print("FROZEN ZONE MOVED — stop and raise this with the user (R1):")
+        for p in frozen_changed:
+            print(f"  CHANGED  {p}")
+        for p in frozen_missing:
+            print(f"  MISSING  {p}")
+        print()
+
     for p in added:
         print(f"NEW      {p}")
     for p in changed:
-        print(f"CHANGED  {p}")
+        if not frozen(p):
+            print(f"CHANGED  {p}")
     for p in missing:
-        print(f"MISSING  {p}")
+        if not frozen(p):
+            print(f"MISSING  {p}")
     if not (added or changed or missing):
         print(f"Clean — {len(new)} files match the manifest "
               f"(baseline {manifest.get('generated', '?')}"
               f"{', hashed' if with_hash else ''}).")
     else:
-        print(f"\n{len(added)} new, {len(changed)} changed, {len(missing)} missing.")
+        print(f"\n{len(added)} new, {len(changed)} changed, {len(missing)} "
+              f"missing — {len(frozen_changed) + len(frozen_missing)} in a "
+              f"frozen zone.")
     print_warnings(*warnings_for(new, args.device))
     return 0 if not (added or changed or missing) else 1
 

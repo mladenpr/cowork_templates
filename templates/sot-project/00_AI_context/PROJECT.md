@@ -8,12 +8,22 @@
 ## What the project is
 
 > One paragraph. What is being produced, for whom, by whom, and what role this
-> repository plays. Name the client and the counterparty explicitly. Cite where
-> the statement comes from: an SoT file, or a dated user statement.
+> repository plays. Cite where the statement comes from: a file in a frozen
+> zone, or a dated user statement.
 
-- **Client / counterparty:** {{CLIENT}}
+- **Principal party:** {{CLIENT}}
 - **Owner:** {{OWNER}}
 - **Started:** {{DATE}}
+
+### Parties
+
+> Everyone this project exchanges documents with, by name, with the label used
+> in the `Party` column of `02_exchange/LOG.md`. One line each. Delete this
+> section on a single-party project — the LOG column just stays constant.
+
+| Party | Role | Label in LOG |
+|---|---|---|
+| {{CLIENT}} | | |
 
 ## Scope and history
 
@@ -38,7 +48,9 @@
 - **Sign and coordinate conventions:** datum, chainage direction, what counts
   as positive, which coordinate system.
 - **Naming and revision conventions:** how documents and drawings are numbered,
-  how revisions are lettered, what "issued" means here.
+  how revisions are lettered, what "issued" means here. A session applies this
+  when it files a document into `02_exchange/issued/` (R5), so write it down
+  precisely enough to be followed without asking.
 - **Commercial terms**, where the project has them: currency, tax treatment,
   what is Included vs Excluded vs Rate-Only, whether preliminaries are priced
   separately or blended.

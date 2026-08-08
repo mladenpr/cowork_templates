@@ -1,8 +1,9 @@
 # cowork_templates
 
 Reusable project-repository templates for working with an AI agent (Claude
-Cowork, Claude Code, or any agent that can read a folder) on real, document-heavy
-projects — tenders, claims, studies, due diligence, litigation, research.
+Cowork, Claude Code, or any agent that can read a folder) on real,
+document-heavy projects — tenders, claims, studies, due diligence, litigation,
+research.
 
 The problem these solve: an AI session starts with no memory. Left to itself it
 re-reads whatever it stumbles across, mixes what a client actually sent with
@@ -15,9 +16,9 @@ scan that forces it to notice what changed since last time.
 
 | Template | Use it for |
 |---|---|
-| [`sot-project`](templates/sot-project) | Any project where raw inputs arrive from outside, get analysed, and issued documents go back out. Currently the only template. |
+| [`sot-project`](templates/sot-project) | Any project that exchanges documents with another party: inputs arrive, work happens, documents are issued. Currently the only template. |
 
-## The `sot-project` pattern
+## The pattern
 
 ```
 <project>/
@@ -28,58 +29,53 @@ scan that forces it to notice what changed since last time.
 │   ├── INDEX.md           ← every file, one line each (descriptions survive)
 │   ├── MANIFEST.json      ← scan baseline (path, size, mtime, sha256)
 │   ├── WORKLOG.md         ← dated decisions, never rewritten
-│   └── sot/               ← one context md per logical dataset in 01_SoT
-├── 01_SoT/                ← Source of Truth: raw inputs only, immutable
-├── 02_derivatives/        ← regenerable outputs (tidy data, figures, extracts)
-│   └── _extracted/        ← searchable text layer, mirroring 01_SoT
-├── 03_deliverables/       ← issued controlled documents, by number & revision
-│   └── REGISTER.md        ← what was issued, to whom, at what revision
-├── 04_tools/              ← kept scripts that produce the derivatives
+│   └── datasets/          ← one context md per dataset or negotiation thread
+├── 01_basis/              ← FROZEN — reference material the work rests on
+├── 02_exchange/           ← FROZEN — the conversation with the other parties
+│   ├── received/          ← what came in
+│   ├── issued/            ← what went out
+│   └── LOG.md             ← both directions, one chronology
+├── 03_working/            ← MUTABLE — nothing here is authoritative
+│   ├── drafts/            ← one live draft per deliverable
+│   ├── analysis/          ← calculations, checks, comparisons
+│   └── _extracted/        ← searchable text layer (regenerated)
+├── 04_tools/              ← kept scripts
 ├── 05_temp/               ← disposable scratch
 └── _to_delete/            ← cleanup staging (only the human empties it)
 ```
 
-Numbering is pipeline order: inputs (01) → working outputs (02) → issued
-documents (03) → machinery (04, 05).
-
 Four ideas carry the whole thing:
 
-**Immutable inputs.** `01_SoT/` holds only what arrived from outside, byte for
-byte, wrong bits included. Nothing generated inside the project ever lands
-there. When an input is demonstrably wrong, the correction is a *new file* in
-`02_derivatives/` with the transformation written down — so months later you can
-still prove what the client actually sent you, separately from what you did
-about it. With documents this bites harder than it sounds: re-saving a `.docx`
-in Word rewrites the package even with no edits, and accepting a tracked change
-destroys a negotiation record.
+**Frozen and moving.** Everything received and everything issued is frozen — a
+record of an exchange, never revised, only superseded. Everything still being
+worked on is mutable and authoritative for nothing. Every rule follows from
+which side of that line a file sits on, including how loudly the session-start
+scan complains when something moves.
 
-**A context layer the agent must read.** Every dataset in `01_SoT/` gets a
-markdown file recording where it came from, what is in it, what is wrong with
-it, what condition it is in, and what downstream depends on it. `PROJECT.md`
-carries the brief and the conventions; `WORKLOG.md` carries dated decisions and
-is never rewritten retroactively. This is the memory the model does not have.
+**Provenance is a lookup.** Direction is the folder boundary: `received/` is
+theirs, `issued/` is ours. "Is this ours or theirs?" is the question that
+decides claims and negotiations, and it must never come down to judgement. The
+corollary catches people out — a copy of your own document returned to you
+marked up is a *received* document.
 
-**A searchable text layer.** An agent cannot grep a PDF. `extract_text.py`
-mirrors `01_SoT/` into `02_derivatives/_extracted/` as one markdown file per
-document — tracked changes, comments, tables, sheets and slides included — so
-"which document says X" becomes a text search instead of a session spent
-reopening binaries. It is fully regenerable, so it costs nothing to throw away.
+**A context layer the agent must read.** Every dataset gets a markdown file
+recording where it came from, what is in it, what is wrong with it, and what
+condition it is in. A negotiation thread is one dataset whose members alternate
+custody, with a member table carrying date, direction, version and *what
+changed*. `PROJECT.md` holds the brief; `WORKLOG.md` holds dated decisions and
+is never rewritten.
 
-**A scan that runs before anything else.** `update_index.py --diff` compares the
-folder against `MANIFEST.json` and reports NEW / CHANGED / MISSING, plus
-suspected sync-conflict copies and filenames OneDrive will refuse to sync. New
-raw files get ingested; anything else gets flagged to you rather than silently
-absorbed. A session that skips the scan is a session working from a stale
-picture.
+**Issuing is a step you ask for.** A document leaves the project only when you
+say so. On that instruction the file moves from drafts into `issued/` under its
+document number and revision, the PDF is filed with its source, the exchange log
+gains a row and the WORKLOG a dated entry. You decide *when*; the clerical work
+is not yours to remember. What this replaces — quietly renaming a draft — leaves
+the project unable to say what was sent, to whom, or under what cover.
 
 The ten rules that formalise this are in
-[`templates/sot-project/README.md`](templates/sot-project/README.md). They are
-short, and they are meant to be binding — the point is that the agent cannot
-improvise around them.
+[`templates/sot-project/README.md`](templates/sot-project/README.md).
 
 ## Quickstart
-
-**With the script** (clone this repo anywhere outside your synced drive):
 
 ```bash
 git clone https://github.com/mladenpr/cowork_templates.git
@@ -88,20 +84,11 @@ python3 bin/new_project.py ~/OneDrive/01_PROJECTS/ACME-Bridge-Cowork \
     --name "ACME Bridge" --client "ACME Infrastructure" --owner "Your Name"
 ```
 
-It copies the template, fills in the placeholders, and writes the first
-INDEX/MANIFEST baseline.
-
-**Without the script:** download the repo as a ZIP, copy
-`templates/sot-project/` to wherever the project should live, rename it, delete
-the `.gitkeep` files, and search-replace `{{PROJECT_NAME}}`,
-`{{PROJECT_FOLDER}}`, `{{CLIENT}}`, `{{OWNER}}`, `{{DATE}}` and
-`{{CLIENT_SUFFIX}}`. Then run `python3 04_tools/update_index.py --hash`.
-
-**Then, in every session**, point the agent at the folder and say:
+Then, in every session, point the agent at the folder and say:
 
 > Read CLAUDE.md and run the session-start scan.
 
-On Windows, use `py -3` wherever these commands say `python3`.
+On Windows use `py -3` wherever these commands say `python3`.
 
 ## Using it day to day
 
@@ -109,7 +96,7 @@ On Windows, use `py -3` wherever these commands say `python3`.
 python3 04_tools/update_index.py --diff    # what changed since last time
 python3 04_tools/update_index.py           # rebuild INDEX.md + MANIFEST.json
 python3 04_tools/extract_text.py           # extract new/changed documents
-python3 04_tools/extract_text.py --report  # what is in SoT and what state it is in
+python3 04_tools/extract_text.py --report  # what is filed, and in what state
 ```
 
 Manifests are content-hashed by default, because a sync client rewrites
@@ -117,7 +104,7 @@ modification times when it hydrates a file or resolves a conflict and an
 mtime-based diff turns to noise. Hashing is sticky — once a manifest carries
 hashes you never need the flag again — and unchanged files reuse their recorded
 hash, so a scan only reads what looks touched. `--rehash` forces a full
-recompute; `--no-hash` deliberately drops back to size+mtime.
+recompute; `--no-hash` drops back to size+mtime.
 
 `extract_text.py` handles Word, Excel and PowerPoint with the standard library
 alone. PDFs need `pip install pypdf`; without it they are recorded as unread
@@ -125,37 +112,15 @@ rather than skipped silently. `--report` is the quickest way to find out that a
 document you were about to rely on is a scan needing OCR, or carries a
 sensitivity label that makes it unreadable to every tool you have.
 
-`INDEX.md` descriptions are hand-written and survive regeneration — that column
-is where the "what is this file, actually" knowledge accumulates. Fill it in.
-
-## Three constraints worth knowing before you start
-
-**Do not `git init` inside a project folder that lives in OneDrive, Dropbox or
-iCloud Drive.** The sync client and git's object store fight, and you will
-eventually corrupt one of them. Version control lives here, at the template
-level; project instances are backed up by the sync client's own version
-history.
-
-**Keep the project folder pinned for offline availability** — "Always Keep on
-This Device" in OneDrive and equivalents elsewhere. A session running locally
-can read a cloud-only placeholder, but only by waiting for it to download, so
-an unpinned project turns the session-start scan into a long stall and fails
-outright when you are offline. (Through a cloud file bridge it is worse: the
-read fails hard on a file that looks perfectly present in Finder.)
-
-**The rules are the only protection you have.** A session running on your
-machine can delete, overwrite and rename — R1 and R8 hold because they are
-followed, not because anything enforces them. That is a change from the cloud
-bridge, where deletion was simply impossible, and it is the reason cleanup goes
-through `_to_delete/` rather than through `rm`.
+The extraction is an index, not a substitute: find things in it, then read them
+in the source. It drops layout, page numbers, images and drawings, and
+reconstructs Word list numbering and Excel dates rather than reading them.
 
 ## Versioning
 
-Releases are git tags on this repository — `v1.0.0` was the initial release,
-`v1.1.0` retargeted the template at document work on a synced drive. `VERSION`
-holds the current number and [`CHANGELOG.md`](CHANGELOG.md) explains what each
-one changed, including what *major*, *minor* and *patch* mean for a template as
-opposed to a library.
+Releases are git tags. `VERSION` holds the current number and
+[`CHANGELOG.md`](CHANGELOG.md) explains what each one changed, including what
+*major*, *minor* and *patch* mean for a template as opposed to a library.
 
 Each project records the version it was created from, in its own `README.md`
 footer and its first WORKLOG entry. To survey a folder of projects:
@@ -164,23 +129,40 @@ footer and its first WORKLOG entry. To survey a folder of projects:
 grep -h "Instantiated from" ~/OneDrive/01_PROJECTS/*/README.md
 ```
 
+**v2.0 restructured the schema.** Projects created from v1.x keep the v1.x
+layout — `01_SoT/`, `02_derivatives/`, `03_deliverables/` — and there is no
+migration. That is deliberate: a live project should not have its rules changed
+under it mid-engagement. Finish those projects as they are; start new ones on
+v2.
+
 ### Upgrading a project that already exists
 
-A project is a copy, not a link. Nothing propagates once it is created, and
-that is deliberate — a live project should not have its rules changed under it
-mid-engagement.
+A project is a copy, not a link. Nothing propagates once it is created.
 
-To pick up newer tooling, copy `templates/sot-project/04_tools/*.py` over the
-project's copies and re-run them. The scripts are self-contained and hold no
-project state, so this is safe at any point; `update_index.py` will reconcile
-against the existing manifest on the next scan.
+Within a major version, copying `templates/sot-project/04_tools/*.py` over the
+project's copies and re-running them is safe — the scripts hold no project
+state. **Across v1 → v2 it is not**: the v2 scripts look for `01_basis/` and
+`02_exchange/` and will not find a v1 project's directories.
 
-Rule changes in `README.md` and `CLAUDE.md` are a judgement call. Applying them
-means re-reading the diff in the changelog and editing two files by hand. Not
-applying them is fine too, as long as the footer still says which version the
-project is on — a project finishing out on v1.0 rules is coherent; a project
-running v1.1 tooling while claiming v1.0 rules is not. Update the footer when
-you upgrade.
+Rule changes are a judgement call either way. Update the footer when you
+upgrade, so the version stamp never claims something untrue.
+
+## Three constraints worth knowing before you start
+
+**Do not `git init` inside a project folder that lives in OneDrive, Dropbox or
+iCloud Drive.** The sync client and git's object store fight, and you will
+eventually corrupt one of them. Version control lives here, at the template
+level; project instances are backed up by the sync client's own version history.
+
+**Keep the project folder pinned for offline availability.** A session running
+locally can read a cloud-only placeholder, but only by waiting for it to
+download, so an unpinned project turns the session-start scan into a long stall
+and fails outright when you are offline.
+
+**The rules are the only protection you have.** A session running on your
+machine can delete, overwrite and rename — R1 and R8 hold because they are
+followed, not because anything enforces them. That is why cleanup goes through
+`_to_delete/` rather than through `rm`.
 
 ## Documentation
 
@@ -190,11 +172,10 @@ you upgrade.
   litigation, due diligence, research and design projects.
 - [`docs/cowork-notes.md`](docs/cowork-notes.md) — practical mechanics of
   running this with Claude Cowork: local vs cloud sessions, sync placeholders,
-  Office locks, where the Microsoft 365 connector fits, and why deletion is a
-  policy rather than a limit.
+  Office locks, where the Microsoft 365 connector fits.
 
 ## Provenance
 
 Extracted from a live engineering-tender project repository (a quay-wall pricing
-tender) after the structure proved itself across several sessions, then
-stripped of everything discipline-specific.
+tender) after the structure proved itself across several sessions, then stripped
+of everything discipline-specific.

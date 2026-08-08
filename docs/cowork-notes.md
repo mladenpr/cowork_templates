@@ -16,7 +16,7 @@ run against the real tree rather than against copies. There is no staging step,
 so there is no snapshot to go stale — the thing the session reads is the thing
 on disk.
 
-This is the right mode for this template. The session-start scan (R4) is the
+This is the right mode for this template. The session-start scan (R7) is the
 mechanism the whole pattern rests on, and it only works when the agent can
 actually run `update_index.py` over the actual folder.
 
@@ -79,31 +79,33 @@ overwrite items, which R8 forbids by whatever route.
 Where it earns its place is fetching inputs that are not on your disk in the
 first place: an attachment sitting in Outlook, a document in a SharePoint
 library you have not synced, a file someone dropped in Teams. Pull it down,
-then ingest it into `01_SoT/` through the normal R3 route, locally, with its
-context md and an index regeneration. The connector gets it to the door; the
-repository rules take over there.
+then ingest it into `02_exchange/received/` through the normal R3 route,
+locally, with its context md, its LOG row and an index regeneration. The
+connector gets it to the door; the repository rules take over there.
 
 ## Getting documents into the project
 
 Anything that arrives — chat upload, email attachment, a folder someone shared
-— goes through R3: into `01_SoT/`, context md written, `extract_text.py` run,
-INDEX and MANIFEST regenerated. The point of making it a single named step is
-that otherwise files get analysed where they landed and the project grows a
-second, undocumented source of truth.
+— goes through R3: into `02_exchange/received/` if it is part of the
+conversation or `01_basis/` if it is reference material, context md written, a
+LOG row appended, `extract_text.py` run, INDEX and MANIFEST regenerated. The
+point of making it a single named step is that otherwise files get analysed
+where they landed and the project grows a second, undocumented record.
 
-Files an agent produces are written directly to the path you name. Say where
-things go — `02_derivatives/` or `03_deliverables/` — and confirm afterwards
-with a fresh listing. Then regenerate the index.
+Files an agent produces are written directly to the path you name. Drafts go to
+`03_working/drafts/`. Anything *leaving* the project goes through the issue
+step (R5) — you ask for it by name, and the move, the naming, the LOG row and
+the WORKLOG entry happen together. Confirm afterwards with a fresh listing.
 
 ## The text layer is what makes documents searchable
 
-`02_derivatives/_extracted/` holds one markdown file per document in `01_SoT/`,
-built by `04_tools/extract_text.py`. Without it, "which document says X" is
+`03_working/_extracted/` holds one markdown file per document in the frozen
+zones, built by `04_tools/extract_text.py`. Without it, "which document says X" is
 unanswerable without opening every file, and every session that needs a figure
 reparses a binary to get it.
 
-Run `extract_text.py --report` when you want to know what state the SoT is in:
-what has been extracted, what is stale, what is a scan needing OCR, what is
+Run `extract_text.py --report` when you want to know what state the frozen
+zones are in: what has been extracted, what is stale, what is a scan needing OCR, what is
 rights-managed and unreadable. It is the fastest way to find out that the
 document you were about to rely on cannot actually be read.
 
@@ -117,9 +119,10 @@ Open a task on the project folder and give it one line:
 
 A well-behaved session then, without further prompting: reads `PROJECT.md` and
 `README.md`, runs `update_index.py --diff`, reports NEW / CHANGED / MISSING and
-any conflict or bad-name warnings, ingests new raw inputs into `01_SoT/` with
-their context md, runs `extract_text.py`, regenerates INDEX and MANIFEST, reads
-the last few WORKLOG entries, and only then asks what you want done.
+any conflict or bad-name warnings, ingests new raw inputs into their zone with
+their context md and LOG row, runs `extract_text.py`, regenerates INDEX and
+MANIFEST, reads `LOG.md` and the last few WORKLOG entries, and only then asks
+what you want done.
 
 If it starts working before it has scanned, stop it. The scan is the only thing
 standing between the session and a stale picture of the project.

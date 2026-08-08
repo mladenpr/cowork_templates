@@ -17,16 +17,106 @@ Semantic versioning, read for a template rather than a library:
 - **patch** — fixes to the scripts or the documentation, with no change to the
   structure or the rules.
 
-## [Unreleased]
+## [2.0.0] — 2026-08-07
+
+Restructures the template around the distinction between documents that are
+**frozen** and documents that are **moving**, and treats the flow of documents
+to and from another party as a conversation rather than as inputs and outputs.
+
+Projects created from v1.x keep the v1.x layout. There is no migration and none
+is planned — a live project should not have its rules changed under it
+mid-engagement. Finish those as they are; start new ones on v2.
+
+### Changed — the schema
+
+```
+01_SoT/            →  01_basis/              reference material only
+02_derivatives/    →  03_working/            drafts/, analysis/, _extracted/
+03_deliverables/   →  02_exchange/issued/
+                   +  02_exchange/received/  (new)
+00_AI_context/sot/ →  00_AI_context/datasets/
+REGISTER.md        →  02_exchange/LOG.md     both directions, one chronology
+```
+
+The numbers no longer mean pipeline order — `02_exchange/` holds both inputs
+and outputs, so no pipeline reading is possible. They now order by status:
+frozen first, then mutable, then machinery.
+
+**Why.** The old axis was *reproducibility*: regenerable outputs in one folder,
+issued documents in another. That axis never survived contact with real work —
+`docs/adapting.md` filed review memos, chronologies and issue matrices under
+derivatives, none of which any script can regenerate, so the promise that the
+folder could be safely purged was already false. Drafts made the gap visible
+rather than creating it. Frozen-versus-moving has no such hole and needs no
+exceptions.
+
+**And why received/issued rather than SoT/deliverables.** What you receive and
+what you issue carry equal weight and are two halves of one exchange; naming one
+"Source of Truth" and the other "deliverables" hid that. `SoT` was the right
+name only for the third thing — reference material the work rests on, from
+sources that are not party to the conversation — which is now `01_basis/`.
 
 ### Added
 
+- **`02_exchange/LOG.md`** — one row per document in or out, in date order, with
+  direction, party, thread, revision, transmittal and status, plus an
+  outstanding-items section. The index of the conversation, the way `INDEX.md`
+  is the index of the files. Rows are written at the moment of the event.
+- **R5, the issue step.** A document leaves the project only when the user asks
+  for it by name. On that instruction the file moves from `03_working/drafts/`
+  into `02_exchange/issued/` under its number and revision, the PDF is filed
+  with its source, the LOG gains a row, the WORKLOG a dated entry, the thread's
+  context md a member row, and the index is regenerated. Silently renaming a
+  draft leaves the project unable to say what was sent, to whom, or under what
+  cover. `CLAUDE.md` carries this and the ingest procedure as explicit steps.
+- **R6, one live draft per deliverable**, revised in place rather than copied to
+  a new file per revision.
+- **Negotiation threads** as a first-class case of R2: a document whose
+  revisions alternate custody is one dataset with a member table carrying date,
+  direction, version, path and *what changed*. The files stay in their direction
+  folders; the thread lives in the context layer. Folders per thread were
+  considered and rejected — they reduce the ours/theirs boundary to a filename
+  convention.
+- **Zone-aware scan severity** in `update_index.py`: movement inside a frozen
+  zone is reported first and separately as something to stop for, while CHANGED
+  in `03_working/` is routine. Without this, a live draft would report CHANGED
+  every session and train you to skim past the reports that matter.
+- **Multi-party support at no cost to single-party projects.** Party is a LOG
+  column, not a folder level. Sub-foldering `received/` or `issued/` by party is
+  available when volume justifies it and carries no semantics — the rules, the
+  scripts and the LOG read identically either way.
 - `VERSION` at the repository root as the single source of truth, and a
   `{{TEMPLATE_VERSION}}` placeholder stamped into each new project's README
-  footer and first WORKLOG entry.
-- `new_project.py --version`.
-- Versioning policy (above) and an "Upgrading a project that already exists"
-  section in the repository README.
+  footer and first WORKLOG entry; `new_project.py --version`. (Merged before
+  this release; the version stamp is what distinguishes a v1 project from a v2
+  one on disk.)
+- `PROJECT.md` gains a Parties table for multi-party projects.
+
+### Changed — the rules
+
+R1–R10 rewritten around the frozen/moving distinction:
+
+- **R1** now covers both frozen zones and makes direction the provenance
+  boundary. Two consequences are stated explicitly because both catch people
+  out: what you issued is frozen too, and your own document returned to you
+  marked up is a *received* document.
+- **R2** extended to threads. **R3** ingestion now decides a zone and writes a
+  LOG row. **R4** is the exchange log. **R5** is issuing. **R6** is working.
+  **R7** merges the old index/manifest and session-start-scan rules and adds
+  zone-aware severity. **R8** (never delete), **R9** (sync discipline) and
+  **R10** (document handling) carry over.
+- `extract_text.py` now walks both frozen zones and writes to
+  `03_working/_extracted/`, keeping the full zone-relative path so the two
+  cannot collide. `03_working/` is not extracted — extracting a live draft would
+  only produce a stale copy of something that changes hourly.
+
+### Not done, deliberately
+
+No `issue.py` or `ingest.py`. Both steps are clerical enough to script, but the
+workflow has not been run once, so the arguments would be guesswork and the LOG
+row is the part that must not be wrong. They are documented as procedures the
+agent performs on your instruction; automate whatever proves stable after a real
+project.
 
 ## [1.1.0] — 2026-08-07
 

@@ -93,7 +93,8 @@ def main():
         "{{CLIENT_SUFFIX}}": f" — for {args.client}" if args.client else "",
     }
 
-    shutil.copytree(TEMPLATE, dest, dirs_exist_ok=True)
+    shutil.copytree(TEMPLATE, dest, dirs_exist_ok=True,
+                    ignore=shutil.ignore_patterns("__pycache__", "*.pyc", ".DS_Store"))
 
     for dirpath, dirnames, filenames in os.walk(dest):
         dirnames[:] = [d for d in dirnames if d != ".git"]
@@ -116,7 +117,8 @@ def main():
     print(f"\nProject created: {dest}  (template v{version})")
     print("Next:")
     print("  1. Pin the folder for offline availability in your sync client (R9).")
-    print("  2. Drop the raw inputs you already have into 01_SoT/.")
+    print("  2. File what you already have: reference material into 01_basis/,")
+    print("     anything another party sent you into 02_exchange/received/.")
     print("  3. Run 04_tools/extract_text.py to build the searchable text layer")
     print("     (PDFs also need `pip install pypdf`).")
     print("  4. Open a Cowork session on the folder and say: "

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""extract_text.py — build the searchable text layer for 01_SoT (rule R10).
+"""extract_text.py — build the searchable text layer for the frozen zones (R10).
 
     python3 04_tools/extract_text.py            # extract what is new or changed
-    python3 04_tools/extract_text.py --report   # what is in SoT and what state it is in
+    python3 04_tools/extract_text.py --report   # what is filed, and in what state
     python3 04_tools/extract_text.py --force    # re-extract everything
     python3 04_tools/extract_text.py /path/to/repo
 
@@ -10,20 +10,26 @@ On Windows use `py -3` in place of `python3`.
 
 Why this exists
 ---------------
-`INDEX.md` gives one line per file and the `00_AI_context/sot/` context files
-give a paragraph per dataset. For a project made of Word documents, PDFs and
-spreadsheets that is the entire searchable surface: an agent cannot grep a
+`INDEX.md` gives one line per file and the `00_AI_context/datasets/` context
+files give a paragraph per dataset. For a project made of Word documents, PDFs
+and spreadsheets that is the entire searchable surface: an agent cannot grep a
 .docx, so every question that needs a number means reopening and reparsing a
 binary, and "which document says X" cannot be answered at all without opening
 all of them.
 
-This script mirrors `01_SoT/` into `02_derivatives/_extracted/` as one markdown
-file per source document. The result is greppable, cheap to read, and fully
-regenerable from `01_SoT/` — so it satisfies R5 and never becomes something you
-have to back up.
+This script mirrors the frozen zones — `01_basis/` and `02_exchange/`, both
+directions — into `03_working/_extracted/` as one markdown file per source
+document, keeping the full zone-relative path so the two cannot collide. The
+result is greppable, cheap to read, and rebuilt by one command, so it never
+becomes something you have to back up.
 
-It reads `01_SoT/` and writes ONLY into `02_derivatives/_extracted/`. It cannot
-modify a source document (R1).
+It reads only the frozen zones and writes only into `03_working/_extracted/`.
+It cannot modify a source document (R1).
+
+The extraction is an index, not a substitute (R10): it drops layout, page
+numbers, images and drawings, and reconstructs Word list numbering and Excel
+dates rather than reading them. Find things here; read them in the source.
+Every extracted file opens with a banner saying so.
 
 Formats
 -------
@@ -59,8 +65,12 @@ import zipfile
 from datetime import datetime, timedelta, timezone
 from xml.etree import ElementTree as ET
 
-SOT_DIR = "01_SoT"
-OUT_DIR = os.path.join("02_derivatives", "_extracted")
+# The frozen zones (R1) are what gets extracted: reference material and both
+# directions of the exchange. 03_working/ is not extracted — it is already
+# yours, already mutable, and extracting a live draft would only produce a
+# stale copy of something that changes hourly.
+SOURCE_DIRS = ("01_basis", "02_exchange")
+OUT_DIR = os.path.join("03_working", "_extracted")
 
 W = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
 A = "{http://schemas.openxmlformats.org/drawingml/2006/main}"
@@ -834,7 +844,7 @@ def extract_one(path, kind, max_rows, reader_cls):
             res.line()
             res.line("Such a file can only be opened by authenticated Office — "
                      "no Python library and no agent can read it. Save a "
-                     "decrypted copy into `02_derivatives/` for analysis, or "
+                     "decrypted copy into `03_working/` for analysis, or "
                      "record in the dataset's context md that the content is "
                      "unavailable and why.")
             return res
@@ -845,7 +855,7 @@ def extract_one(path, kind, max_rows, reader_cls):
                      "Office package — it is empty, truncated, or misnamed.")
             res.line()
             res.line("Check it against what was actually received. A zero-byte "
-                     "or truncated file in `01_SoT/` usually means a sync that "
+                     "or truncated file in a frozen zone usually means a sync that "
                      "never completed (R9).")
             return res
     try:
@@ -907,16 +917,21 @@ def is_current(out_path, st):
 
 
 def sources(root):
-    sot = os.path.join(root, SOT_DIR)
-    for dirpath, dirnames, filenames in os.walk(sot):
-        dirnames[:] = sorted(d for d in dirnames if not d.startswith("."))
-        for fn in sorted(filenames):
-            if fn.startswith((".", "~")) or fn.lower().endswith(".tmp"):
-                continue
-            full = os.path.join(dirpath, fn)
-            if not os.path.isfile(full):
-                continue
-            yield full, os.path.relpath(full, root).replace(os.sep, "/")
+    for zone in SOURCE_DIRS:
+        for dirpath, dirnames, filenames in os.walk(os.path.join(root, zone)):
+            dirnames[:] = sorted(d for d in dirnames if not d.startswith("."))
+            for fn in sorted(filenames):
+                if fn.startswith((".", "~")) or fn.lower().endswith(".tmp"):
+                    continue
+                full = os.path.join(dirpath, fn)
+                if not os.path.isfile(full):
+                    continue
+                yield full, os.path.relpath(full, root).replace(os.sep, "/")
+
+
+def output_path(root, rel):
+    """Mirror the full zone-relative path so the two zones cannot collide."""
+    return os.path.join(root, OUT_DIR, rel + ".md")
 
 
 def report(root, reader_cls):
@@ -924,8 +939,7 @@ def report(root, reader_cls):
     for full, rel in sources(root):
         ext = os.path.splitext(full)[1].lower()
         kind = classify(ext)
-        out_path = os.path.join(root, OUT_DIR,
-                                os.path.relpath(rel, SOT_DIR) + ".md")
+        out_path = output_path(root, rel)
         if kind == "text":
             state = "already text"
         elif kind == "opaque":
@@ -940,7 +954,7 @@ def report(root, reader_cls):
                 state += " — STALE"
         rows.append((rel, state))
     if not rows:
-        print(f"No files under {SOT_DIR}/.")
+        print(f"No files under {' / '.join(SOURCE_DIRS)}.")
         return 0
     width = max(len(r[0]) for r in rows)
     print(f"{'source'.ljust(width)}  state")
@@ -954,7 +968,7 @@ def report(root, reader_cls):
 
 def main():
     ap = argparse.ArgumentParser(
-        description="Extract 01_SoT documents into a searchable text layer.")
+        description="Extract the frozen zones into a searchable text layer.")
     ap.add_argument("root", nargs="?",
                     help="repo root (default: this script's parent's parent)")
     ap.add_argument("--force", action="store_true",
@@ -967,8 +981,8 @@ def main():
 
     root = (os.path.abspath(os.path.expanduser(args.root)) if args.root
             else os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    if not os.path.isdir(os.path.join(root, SOT_DIR)):
-        sys.exit(f"No {SOT_DIR}/ under {root}")
+    if not any(os.path.isdir(os.path.join(root, z)) for z in SOURCE_DIRS):
+        sys.exit(f"No frozen zones ({' / '.join(SOURCE_DIRS)}) under {root}")
 
     reader_cls = load_pypdf()
     if args.report:
@@ -980,8 +994,7 @@ def main():
         kind = classify(os.path.splitext(full)[1].lower())
         if kind in ("text", "opaque"):
             continue
-        out_path = os.path.join(root, OUT_DIR,
-                                os.path.relpath(rel, SOT_DIR) + ".md")
+        out_path = output_path(root, rel)
         st = os.stat(full)
         if not args.force and os.path.exists(out_path) and is_current(out_path, st):
             skipped += 1
