@@ -81,6 +81,54 @@ named step: into `02_exchange/received/` if it is part of the conversation, or
 row appended to the LOG; the text layer extracted; INDEX and MANIFEST
 regenerated. Nothing raw is worked on where it landed.
 
+**Text pasted into a chat window is not ingestion.** An email quoted into a
+session so it can be read, checked or answered is working material. A session
+may use it, cross-check it against the frozen zones and draft the reply that
+was asked for — but it does not file it, and nothing it says (a figure, a date,
+a commitment, a concession) is written into `WORKLOG.md`, `PROJECT.md` or a
+dataset context md while a chat message is its only source. Every recorded fact
+resolves to a file in a frozen zone or to a script in `04_tools/`. A paste is
+neither, and it is gone when the session closes.
+
+Whether a piece of correspondence belongs in the record is a judgement, and it
+is yours — the same seam as R5. When an email matters enough to keep, write it
+into a markdown file and drop it into `02_exchange/received/`, or
+`02_exchange/issued/` if it is one you sent. It appears as NEW in the next
+session-start scan and is ingested by this rule like anything else. A
+transcribed email you sent is correspondence, not a deliverable: it carries no
+document number and no revision, and it does not go through the issue procedure
+(R5), which exists for controlled documents leaving `03_working/drafts/`.
+
+Head the file so that it declares what it is:
+
+```markdown
+# Email — <subject>
+
+- **Direction / Party:** in — <who sent it> | out — <who it went to>
+- **Sent:** <date, and time where it matters> — as stated in the email
+- **From / To / Cc:**
+- **Thread:** <the LOG thread this belongs to>
+- **Transcribed by:** <name>, <date> — body verbatim, no corrections
+- **Attachments named:** none | "<filename>" — not held in this project
+- **Not captured:** header chain, formatting, the thread quoted below the reply
+
+---
+
+<the email body, verbatim>
+```
+
+Name it `YYYY-MM-DD_<party>_<subject-slug>.md`, dated the day the email was
+sent rather than the day it was typed up, and it is frozen from that point like
+everything else in the zone (R1).
+
+Three of those lines carry the weight. **Transcribed by** is what stops the file
+being read, months later, as the original — it is a copy, and a copy standing
+next to genuine received documents is indistinguishable from one unless it says
+so. **Attachments named** turns "this email refers to a drawing" into something
+you discover now rather than when you go to rely on it. **Not captured** records
+the shape of what was left behind. Delete the lines that do not apply; keep
+those three.
+
 **R4 — The exchange log.** `02_exchange/LOG.md` carries one row per document in
 or out, in date order, with its direction, party and thread. It is the index of
 the conversation, the way `INDEX.md` is the index of the files, and it is what
@@ -154,7 +202,10 @@ properties a file tree does not express:
   zone. In a received document the markup *is* the content.
 - **Keep the text layer current.** `04_tools/extract_text.py` mirrors the frozen
   zones into `03_working/_extracted/`, so the project is greppable. Run it after
-  every ingestion and every issue.
+  every ingestion and every issue. Files that are already text — a markdown
+  email transcript — are deliberately not mirrored, since the copy would be the
+  original; a search covers `_extracted/` **and** the frozen zones, or it misses
+  them.
 - **The text layer is an index, not a substitute.** Use it to find things, then
   open the source. Any figure, date or quotation entering a document is read
   from the file in the frozen zone, not from the extraction — which drops

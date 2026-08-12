@@ -97,6 +97,32 @@ defaulting. Reference material that everybody has (a standard, a code) is not
 part of your conversation with anyone, and filing it under `received/` inflates
 the exchange record with things nobody sent you.
 
+**Pasted text is the case the rule has to exclude.** Quoting an email into a
+chat window to have it read or answered looks like arrival, and a session
+reading R3 literally would file it. It should not, for two reasons that pull in
+opposite directions and land in the same place.
+
+The first is that most pasted email is not correspondence anybody needs to
+keep. Filing all of it fills `received/` with transcripts of scheduling notes,
+and a folder that holds everything that passed through a chat window no longer
+means "this is the record". The filter is the value, and the filter is human —
+the same seam as R5, where you decide a document is finished and the clerical
+work is not yours to remember.
+
+The second is subtler and is the reason the rule is written at all. A paste can
+enter the project's *context layer* without ever becoming a file: a session
+reads an email, works from it, and writes a WORKLOG entry or a `PROJECT.md`
+line based on what it said. The project now holds a fact whose only source was
+a chat message that no longer exists. The frozen zones guarantee provenance by
+holding the artefact; nothing guarantees it for a sentence somebody typed. So
+the boundary the rule draws is not "in the folder or not" but "has provenance
+or not", and the second is the one that can be crossed silently.
+
+What follows from both is a transcript written deliberately, by the person who
+decided it mattered, declaring itself a copy — with what it left behind, and
+which attachments it names but does not hold. Once written it is a file that
+arrived, and R3 applies to it unchanged.
+
 ## R4 — The exchange log
 
 **Failure it prevents:** a conversation you can only reconstruct by guessing.

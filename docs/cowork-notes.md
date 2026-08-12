@@ -97,6 +97,30 @@ Files an agent produces are written directly to the path you name. Drafts go to
 step (R5) — you ask for it by name, and the move, the naming, the LOG row and
 the WORKLOG entry happen together. Confirm afterwards with a fresh listing.
 
+## Pasting email text into a session
+
+Quoting an email into the chat window to have it reviewed, checked or answered
+is the ordinary way to use a session, and nothing is filed as a result. The
+session reads it, cross-checks it against the frozen zones and drafts the
+reply; when the session closes the paste is gone, which is usually what you
+want. It will not write anything the paste said into the WORKLOG or a context
+md either — a fact whose only source is a chat message has no provenance, and
+that is the actual risk, not the lost text.
+
+When an email is contractually significant, type it into a markdown file and
+drop it into `02_exchange/received/` — or `02_exchange/issued/` if you sent it,
+which is the one thing that may enter that folder without going through the
+issue step. Head it with the block in R3 so it declares that it is a transcript
+rather than an original, and note the attachments it mentions but does not
+carry. The next session-start scan sees it as NEW and does the rest — context
+md, LOG row with `email (transcript)` in the Ref column, extraction, reindex —
+without being asked, because you already made the decision that mattered.
+
+If you would rather dictate it than type it, ask the session to write the
+transcript from your paste. Expect it to ask for the sent date, the recipients
+and the attachments — it will not guess a date, since a LOG row with an
+invented date reads exactly like a fact.
+
 ## The text layer is what makes documents searchable
 
 `03_working/_extracted/` holds one markdown file per document in the frozen

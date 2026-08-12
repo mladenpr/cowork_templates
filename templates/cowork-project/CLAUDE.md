@@ -19,8 +19,10 @@ any work in this project:
    outstanding.
 5. Check `00_AI_context/WORKLOG.md` for the latest decisions and open items.
 6. Consult `00_AI_context/INDEX.md` before searching the tree. To search
-   *inside* documents, grep `03_working/_extracted/`; then open the source in
-   the frozen zone to read anything you intend to rely on (R10).
+   *inside* documents, grep `03_working/_extracted/` **and** the frozen zones
+   themselves — a file that is already text, such as an email transcript, is
+   not mirrored into the extraction and would otherwise be missed. Then open
+   the source in the frozen zone to read anything you intend to rely on (R10).
 
 ## Invariants
 
@@ -32,7 +34,9 @@ any work in this project:
 - **Never delete anything.** Move it to `_to_delete/` and tell the user (R8).
   You have real write access on this machine; this rule is what stands in for
   the protection the filesystem does not give.
-- **Nothing enters `02_exchange/issued/` except through the issue procedure.**
+- **Nothing enters `02_exchange/issued/` except through the issue procedure**,
+  or as a transcript of correspondence the user has already sent (R3). The
+  second is a record being written down, not a document being released.
 - **`03_working/` holds one live draft per deliverable**, revised in place —
   not a new file per revision.
 - After any file operation, regenerate `INDEX.md` and `MANIFEST.json` with
@@ -40,8 +44,9 @@ any work in this project:
 
 ## Procedure: ingest a document that arrived
 
-Triggered whenever anything reaches the project from outside — chat upload,
-email attachment, a file the user dropped in, a scan the session found.
+Triggered whenever a **file** reaches the project from outside — uploaded into
+the chat, an email attachment, dropped into the folder, found by the scan. Text
+pasted into the chat window is not a file and is not ingested; see below.
 
 1. Decide the zone, and ask if it is not obvious: `02_exchange/received/` if it
    is part of the conversation with another party, `01_basis/` if it is
@@ -58,6 +63,35 @@ email attachment, a file the user dropped in, a scan the session found.
 6. Report what was filed, and anything the extraction flagged — a scan needing
    OCR, a rights-managed file, tracked changes — since those belong in the
    context md.
+
+## Email text pasted into the session
+
+The user quotes email text into the chat window — under double quotes — to have
+it read, checked against the project, or answered. That is working material,
+not project material.
+
+- Use it: read it, cross-check it against the frozen zones, draft the reply.
+- Do not file it, and do not offer to.
+- Do not write anything it says into `WORKLOG.md`, `PROJECT.md` or a dataset
+  context md while a chat message is its only source. If a paste changes what
+  the project believes, say so and ask whether it should be recorded — the
+  answer decides, not the significance of the content.
+
+What belongs in the record is the user's judgement, and they write the file: a
+markdown transcript dropped into `02_exchange/received/`, or `issued/` for one
+they sent. It surfaces as NEW in the next session-start scan. **Ingest it by
+the procedure above without asking** — context md, LOG row, extraction, index —
+since the decision it needed has already been made. Read the header the file
+carries rather than re-deriving direction and party from its contents.
+
+In the LOG, such a row records `email (transcript)` in **Ref**. A transcribed
+email the user sent takes direction `out` with no document number and no
+revision; it is correspondence, not an issued deliverable.
+
+If the user asks *you* to write the transcript, follow the header block in
+`README.md` (R3) and ask for whatever the paste does not state — the sent date,
+the recipients, the attachments it mentions. Never infer the date: a LOG row
+with a guessed date is worse than no row, because it looks like a fact.
 
 ## Procedure: issue a document
 

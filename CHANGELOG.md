@@ -17,6 +17,73 @@ Semantic versioning, read for a template rather than a library:
 - **patch** — fixes to the scripts or the documentation, with no change to the
   structure or the rules.
 
+## [2.0.1] — 2026-08-12
+
+Closes an ambiguity in R3 about email text pasted into a chat window. No
+schema change, no new rule number, nothing an existing v2.0.0 project has to
+adopt — copy the three template files over if you want it.
+
+### Clarified — R3 does not cover pasted text
+
+R3 says ingestion is triggered by "anything arriving from outside", and
+`CLAUDE.md` listed chat uploads among the triggers. An email quoted into a
+session reads as arrival, so a session applying the rule literally would file
+it — inventing a filename inside a frozen zone, which R1 has no vocabulary for,
+since every other file there enters already formed and is never renamed.
+
+Pasting email to have it reviewed or answered is now stated to be working
+material. A session may use it and draft from it; it does not file it, and it
+does not write what the paste said into `WORKLOG.md`, `PROJECT.md` or a dataset
+context md while a chat message is the only source.
+
+**Why the second half matters more than the first.** Losing the text is not the
+risk — the risk is a fact entering the context layer with no provenance, which
+happens without any file being created and is invisible afterwards. The frozen
+zones guarantee provenance by holding the artefact; nothing guarantees it for a
+sentence somebody typed into a window.
+
+### Added — the correspondence transcript
+
+Deciding an email belongs in the record stays with the user, on the same seam as
+R5: they write a markdown transcript and drop it in, the scan sees it as NEW,
+and the session ingests it without asking, since the judgement it needed has
+already been made.
+
+- A header block in R3 the transcript carries: direction and party, sent date,
+  from/to, thread, **transcribed by** (so a copy is never read as an original),
+  **attachments named** but not held, and **not captured**. Filename
+  `YYYY-MM-DD_<party>_<subject-slug>.md`, dated when the email was sent.
+- `LOG.md` gains `email (transcript)` as a **Ref** value, so a row cannot imply
+  the project holds the original.
+- The `issued/` invariant in `CLAUDE.md` now names a second door: a transcript
+  of correspondence already sent. It is a record being written down, not a
+  document being released, and it takes no document number or revision — the
+  issue procedure remains the only route for anything leaving
+  `03_working/drafts/`.
+- `docs/pattern.md` and `docs/cowork-notes.md` carry the reasoning and the
+  day-to-day version.
+
+### Fixed — searching would have missed transcripts
+
+`extract_text.py` skips files that are already text, correctly: mirroring a
+markdown file into `03_working/_extracted/` produces a copy of the original.
+But `CLAUDE.md` told sessions to search inside documents by grepping the
+extraction, and an email transcript is never in it — so a session searching
+exactly as instructed would find no email at all. The search instruction in
+`CLAUDE.md` and the text-layer bullet in R10 now say to cover `_extracted/` and
+the frozen zones both. No script change.
+
+Sessions asked to write a transcript must request the sent date, recipients and
+attachments rather than infer them. A LOG row with a guessed date is worse than
+no row, because it reads as a fact.
+
+### Not done, deliberately
+
+No automatic filing of pasted email, and no prompt offering it. Most pasted
+correspondence is not worth keeping, and a `received/` folder holding
+everything that passed through a chat window stops meaning "this is the
+record". The filter is the value of the frozen zone, and the filter is human.
+
 ## [2.0.0] — 2026-08-07
 
 Restructures the template around the distinction between documents that are

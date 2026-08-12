@@ -29,7 +29,10 @@ Columns:
 - **Rev** — the sender's own revision, not an internal one. It is what the other
   side will cite.
 - **Ref** — outbound: the transmittal, covering letter or portal submission.
-  Inbound: how it arrived — email, Teams, portal, hand delivery.
+  Inbound: how it arrived — email, Teams, portal, hand delivery. An email typed
+  up into a markdown file rather than filed as it arrived says `email
+  (transcript)`, because what the project holds is a copy and the row should
+  not imply otherwise.
 - **Status** — `current`, `superseded by Rev n`, `withdrawn`, or for inbound
   items `open` / `answered by …` when a reply is owed.
 
