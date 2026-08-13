@@ -81,15 +81,49 @@ The ten rules that formalise this are in
 
 ## Quickstart
 
+### Once — clone the toolbox, somewhere that is not a project
+
 ```bash
-git clone https://github.com/mladenpr/cowork_templates.git
-cd cowork_templates
-python3 bin/new_project.py ~/OneDrive/01_PROJECTS/ACME-Bridge-Cowork \
+git clone https://github.com/mladenpr/cowork_templates.git ~/tools/cowork_templates
+```
+
+This clone is a toolbox, not a project. It is never copied into a project
+folder and never lives inside one. Keep it off the synced drive as well: it
+carries a `.git` directory, and that is the same sync-client-versus-git fight
+described below, just one level up.
+
+Update it whenever you like — `git -C ~/tools/cowork_templates pull`. Existing
+projects are unaffected either way; a project is a copy, not a link.
+
+### Per project — make the folder, then fill it
+
+```bash
+mkdir -p ~/OneDrive/01_PROJECTS/ACME-Bridge-Cowork
+
+python3 ~/tools/cowork_templates/bin/new_project.py \
+    ~/OneDrive/01_PROJECTS/ACME-Bridge-Cowork \
     --name "ACME Bridge" --client "ACME Infrastructure" --owner "Your Name"
 ```
 
+**The destination receives one template and nothing else** — no `.git`, no
+second template, none of this repository's own files. `VERSION` and the
+`.gitkeep` markers are stripped on the way in, and every `{{PLACEHOLDER}}` is
+substituted, so what you get is a working project folder rather than a checkout
+to clean up. The folder need not exist beforehand; it simply may, which is why
+the `mkdir` above is optional. An existing folder with files already in it needs
+`--force`, so that nothing is written over a project by accident.
+
 `--template` selects which template to instantiate, and defaults to
 `cowork-consultant`. `bin/new_project.py --help` lists what is available.
+
+Worth a shell function if you start projects often:
+
+```bash
+# ~/.zshrc
+cowork-new() { python3 ~/tools/cowork_templates/bin/new_project.py "$@"; }
+
+cowork-new ~/OneDrive/01_PROJECTS/ACME-Bridge-Cowork --name "ACME Bridge"
+```
 
 Then, in every session, point the agent at the folder and say:
 
