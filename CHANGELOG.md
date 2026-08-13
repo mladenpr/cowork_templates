@@ -2,11 +2,17 @@
 
 All notable changes to the templates in this repository.
 
-Releases are git tags on this repository (`v1.0.0`, `v1.1.0`), and the current
-number lives in `VERSION`. Every project stamps the template version it was
-created from into its own `README.md` footer and its first WORKLOG entry —
+Templates are versioned independently, each in its own
+`templates/<template>/VERSION`. Every project stamps the template and version it
+was created from into its own `README.md` footer and its first WORKLOG entry —
 a project is a copy, not a link, so that stamp is the only record of which
-rules and tooling it actually has.
+rules and tooling it actually has. Releases are git tags on this repository.
+
+Entries name their template in the heading from `cowork-consultant 2.0.2`
+onwards. Everything below that point describes the single template this
+repository started with — the one now called `cowork-consultant`, under the
+names it carried at the time: `sot-project` through 1.x, `cowork-project` at
+2.0.0 and 2.0.1. Those entries are left as they were written.
 
 Semantic versioning, read for a template rather than a library:
 
@@ -16,6 +22,68 @@ Semantic versioning, read for a template rather than a library:
   project can take or leave.
 - **patch** — fixes to the scripts or the documentation, with no change to the
   structure or the rules.
+
+## cowork-contractor 0.1.0 — 2026-08-13
+
+A starting point, not yet a template. `templates/cowork-contractor/` is an
+unmodified copy of `cowork-consultant` 2.0.2, carrying its own name in the two
+stamp lines and nothing else of its own, placed here so the contracting
+structure can be developed in the open rather than in a branch.
+
+It is deliberately numbered below 1.0.0 and marked **not ready** in the README.
+Nothing in it has been adapted to contracting work yet, so a project started
+from it today would carry a stamp naming a template that does not really exist.
+
+### Not done, deliberately
+
+- No structural change, no rule change, no guess at what contracting needs. The
+  zones, R1–R10 and both procedures are consultant's, unexamined.
+- The two templates each keep their own copy of `04_tools/*.py` rather than
+  sharing one. Factoring out a script the moment a second copy exists is the
+  wrong instinct here: the contractor tooling may need to diverge, and a shared
+  script is much harder to split later than two identical ones are to merge.
+
+## cowork-consultant 2.0.2 — 2026-08-13
+
+Renames the template and moves its version number inside it. No schema change
+and no rule change — an existing 2.0.x project is already current, apart from
+one line in its README footer.
+
+### Changed — the template is now `cowork-consultant`
+
+`templates/cowork-project/` → `templates/cowork-consultant/`. This repository is
+about to hold more than one template, and "project" says nothing about which
+kind of work a template is shaped for; the consulting and the contracting sides
+run differently enough to want different structures. Earlier changelog entries
+keep the old paths, because that is what they were called at the time.
+
+The stamp in a new project's README footer and first WORKLOG entry names the
+template it came from, so it now reads `cowork-consultant`. Projects created
+before this release say `cowork-project` and are not wrong — that was the name.
+
+### Changed — each template carries its own `VERSION`
+
+`templates/<template>/VERSION` is what `new_project.py` now stamps, falling back
+to the repository's root `VERSION` for a template that has none.
+
+**Why.** The stamp is a claim about which rules and which tooling a given
+project has. With one template, that claim and the repository's release number
+were the same number by accident. With two they are not: a patch to the
+contractor template would have renumbered every consultant project created after
+it, and the stamp would have quietly stopped meaning what the README promises it
+means — while still looking exactly as authoritative.
+
+`VERSION` is dropped on instantiation, alongside the `.gitkeep` markers. Both
+are scaffolding for this repository — one so git tracks empty folders, the other
+so this script knows what to stamp — and a project has no use for either once
+the two places that matter already record it.
+
+### Added — `--template`
+
+`new_project.py --template cowork-contractor` picks a sibling directory under
+`templates/`. It defaults to `cowork-consultant`, so every command documented
+before this release still does what it did. An unknown name exits with the list
+of what is actually available rather than a traceback or a half-written folder.
 
 ## [2.0.1] — 2026-08-12
 

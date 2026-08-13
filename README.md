@@ -14,9 +14,13 @@ scan that forces it to notice what changed since last time.
 
 ## Templates
 
-| Template | Use it for |
-|---|---|
-| [`cowork-project`](templates/cowork-project) | Any project that exchanges documents with another party: inputs arrive, work happens, documents are issued. Currently the only template. |
+| Template | Version | Use it for |
+|---|---|---|
+| [`cowork-consultant`](templates/cowork-consultant) | 2.0.2 | Consulting engagements — any project that exchanges documents with another party: inputs arrive, work happens, documents are issued. |
+| [`cowork-contractor`](templates/cowork-contractor) | 0.1.0 | Contracting work. **Not ready** — currently an unmodified copy of `cowork-consultant`, placed so its structure can be developed in the open. Do not start a real project from it yet. |
+
+Templates are versioned independently and each carries its own `VERSION` file;
+see [Versioning](#versioning). Pick one with `--template`.
 
 ## The pattern
 
@@ -73,7 +77,7 @@ is not yours to remember. What this replaces — quietly renaming a draft — le
 the project unable to say what was sent, to whom, or under what cover.
 
 The ten rules that formalise this are in
-[`templates/cowork-project/README.md`](templates/cowork-project/README.md).
+[`templates/cowork-consultant/README.md`](templates/cowork-consultant/README.md).
 
 ## Quickstart
 
@@ -83,6 +87,9 @@ cd cowork_templates
 python3 bin/new_project.py ~/OneDrive/01_PROJECTS/ACME-Bridge-Cowork \
     --name "ACME Bridge" --client "ACME Infrastructure" --owner "Your Name"
 ```
+
+`--template` selects which template to instantiate, and defaults to
+`cowork-consultant`. `bin/new_project.py --help` lists what is available.
 
 Then, in every session, point the agent at the folder and say:
 
@@ -118,20 +125,31 @@ reconstructs Word list numbering and Excel dates rather than reading them.
 
 ## Versioning
 
-Releases are git tags. `VERSION` holds the current number and
-[`CHANGELOG.md`](CHANGELOG.md) explains what each one changed, including what
-*major*, *minor* and *patch* mean for a template as opposed to a library.
+**Each template is versioned on its own history**, in its own
+`templates/<template>/VERSION`. A fix to one template must not renumber the
+other: the version a project stamps is a claim about which rules and which
+tooling *that* project has, and a shared number would make it a claim about
+this repository instead. The `VERSION` at the root is the repository release,
+and serves only as a fallback for a template that has none.
 
-Each project records the version it was created from, in its own `README.md`
-footer and its first WORKLOG entry. To survey a folder of projects:
+Releases are git tags, and [`CHANGELOG.md`](CHANGELOG.md) carries a section per
+template explaining what each version changed — including what *major*, *minor*
+and *patch* mean for a template as opposed to a library.
+
+Each project records the template and version it was created from, in its own
+`README.md` footer and its first WORKLOG entry. To survey a folder of projects:
 
 ```bash
 grep -h "Instantiated from" ~/OneDrive/01_PROJECTS/*/README.md
 ```
 
-**v2.0 restructured the schema.** Projects created from v1.x keep the v1.x
-layout — `01_SoT/`, `02_derivatives/`, `03_deliverables/` — and there is no
-migration. That is deliberate: a live project should not have its rules changed
+The `VERSION` file itself never reaches a project — `new_project.py` strips it
+on the way through, along with the `.gitkeep` markers. Both are scaffolding for
+this repository, and the stamp already records what they were for.
+
+**cowork-consultant v2.0 restructured the schema.** Projects created from v1.x
+keep the v1.x layout — `01_SoT/`, `02_derivatives/`, `03_deliverables/` — and
+there is no migration. That is deliberate: a live project should not have its rules changed
 under it mid-engagement. Finish those projects as they are; start new ones on
 v2.
 
@@ -139,7 +157,7 @@ v2.
 
 A project is a copy, not a link. Nothing propagates once it is created.
 
-Within a major version, copying `templates/cowork-project/04_tools/*.py` over the
+Within a major version, copying `templates/cowork-consultant/04_tools/*.py` over the
 project's copies and re-running them is safe — the scripts hold no project
 state. **Across v1 → v2 it is not**: the v2 scripts look for `01_basis/` and
 `02_exchange/` and will not find a v1 project's directories.
