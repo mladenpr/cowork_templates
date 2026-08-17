@@ -11,23 +11,37 @@ so the entry stays resolvable later.
 
 ## {{DATE}} — Repository created
 
-- Structure instantiated from the `cowork-contractor` template **v{{TEMPLATE_VERSION}}**:
-  `00_AI_context/` (PROJECT, INDEX, MANIFEST, WORKLOG, datasets/), `01_basis/`,
-  `02_exchange/` (received/, issued/, LOG.md), `03_working/` (drafts/,
-  analysis/, _extracted/), `04_tools/`, `05_temp/`, `_to_delete/`.
-- Rules R1–R10 in README.md. `01_basis/` and `02_exchange/` are frozen;
-  `03_working/` is mutable. CLAUDE.md points every session at the context
+- Structure instantiated from the `cowork-contractor` template
+  **v{{TEMPLATE_VERSION}}**: `00_AI_context/` (PROJECT, PARTIES, INDEX,
+  MANIFEST, WORKLOG, datasets/, registers/), `01_contract/` (upstream/,
+  downstream/), `02_basis/`, `03_exchange/` (received/, issued/, LOG.jsonl,
+  LOG.md), `04_working/` (drafts/, analysis/, _extracted/), `05_tools/`,
+  `06_temp/`, `_inbox/`, `_to_delete/`.
+- Rules R1–R11 in README.md. `01_contract/`, `02_basis/` and `03_exchange/` are
+  frozen; `04_working/` is mutable; `_inbox/` is unfiled staging and
+  authoritative for nothing. CLAUDE.md points every session at the context
   layer, the session-start scan, and the ingest and issue procedures.
-- `04_tools/update_index.py` generates INDEX.md and MANIFEST.json; initial
+- `05_tools/update_index.py` generates INDEX.md and MANIFEST.json; initial
   baseline generated today.
-- `04_tools/extract_text.py` builds the searchable text layer in
-  `03_working/_extracted/`; nothing to extract yet.
-- PROJECT.md is a stub — nothing ingested yet, both frozen zones are empty.
+- `05_tools/log.py` maintains `03_exchange/LOG.jsonl`, renders `LOG.md` from
+  it and checks it against the tree; no events logged yet.
+- `05_tools/extract_text.py` builds the searchable text layer in
+  `04_working/_extracted/`; nothing to extract yet.
+- PROJECT.md is a stub — nothing ingested yet, all three frozen zones are empty.
 
 Open items:
 
-- Fill in `00_AI_context/PROJECT.md` at first ingestion, including the naming
-  and revision convention a session must apply when issuing (R5).
+- File the executed contract into `01_contract/upstream/`, with the documents
+  it incorporates, log it (`--type contract`), and fill in the "The contract"
+  section of `PROJECT.md` from it — including the order-of-precedence, authority
+  and notice clauses.
+- List the counterparties in `00_AI_context/PARTIES.md`, with the label each
+  will be filed and logged under. Labels are permanent; choose them once.
+- Fill in `00_AI_context/PROJECT.md`, including the document numbering and
+  revision convention a session must apply when issuing (R5).
+- Decide which controlled series need a register (R11) — variations, RFIs,
+  purchase orders, payment applications. Start with none and add them when a
+  series grows past being answerable from the log.
 - Pin the folder for offline availability in the sync client (user action, R9).
 - Install `pypdf` if the project will contain PDFs (`pip install pypdf`) —
   without it `extract_text.py` records PDFs as unread rather than reading them.

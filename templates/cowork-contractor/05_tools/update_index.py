@@ -4,20 +4,22 @@
 Usage (run from anywhere; repo root is auto-detected as this script's
 grandparent directory, or pass it explicitly):
 
-    python3 04_tools/update_index.py                # regenerate INDEX + MANIFEST
-    python3 04_tools/update_index.py --diff         # diff repo vs MANIFEST, change nothing
-    python3 04_tools/update_index.py --hash         # regenerate, recording sha256 per file
-    python3 04_tools/update_index.py --diff --hash  # diff by content, ignoring mtime churn
-    python3 04_tools/update_index.py --rehash       # recompute every hash from scratch
-    python3 04_tools/update_index.py --no-hash      # drop back to size+mtime
-    python3 04_tools/update_index.py /path/to/repo [--diff] [--hash]
-    python3 04_tools/update_index.py --name "Project name"
+    python3 05_tools/update_index.py                # regenerate INDEX + MANIFEST
+    python3 05_tools/update_index.py --diff         # diff repo vs MANIFEST, change nothing
+    python3 05_tools/update_index.py --hash         # regenerate, recording sha256 per file
+    python3 05_tools/update_index.py --diff --hash  # diff by content, ignoring mtime churn
+    python3 05_tools/update_index.py --rehash       # recompute every hash from scratch
+    python3 05_tools/update_index.py --no-hash      # drop back to size+mtime
+    python3 05_tools/update_index.py /path/to/repo [--diff] [--hash]
+    python3 05_tools/update_index.py --name "Project name"
 
 On Windows use `py -3` in place of `python3`.
 
 Behavior:
-- Walks the whole repo, skipping _to_delete/, hidden files, and the temporary
-  files Office and the sync client leave behind (see SKIP_* below).
+- Walks the whole repo, skipping _to_delete/, 06_temp/, hidden files, and the
+  temporary files Office and the sync client leave behind (see SKIP_* below).
+  06_temp/ is disposable scratch: nothing in it is filed, so nothing in it is
+  indexed or reported.
 - MANIFEST.json: {"generated": iso-ts, "project": name,
   "files": [{"path","size","mtime"[,"sha256"]}]}.
 - INDEX.md: one line per file, grouped by top-level directory. One-line
@@ -25,10 +27,20 @@ Behavior:
   they survive; new files get an empty description to be filled in.
 - --diff: prints NEW / CHANGED / MISSING files relative to MANIFEST.json and
   exits 1 if anything differs (0 if clean). Used by the session-start scan.
-- Movement inside a frozen zone (01_basis/, 02_exchange/) is reported first and
-  separately. A file that changed or vanished there means either a rule was
-  broken or the sync client did something, and neither is for a session to
-  resolve. The same event in 03_working/ is just a draft being drafted.
+- Both modes check that the schema's directories exist. The manifest records
+  files, and an empty directory holds none, so a directory that vanished would
+  otherwise leave no trace; a missing one is reported by name and makes --diff
+  exit 1.
+- Movement inside a frozen zone (01_contract/, 02_basis/, 03_exchange/) is
+  reported first and separately. A file that changed or vanished there means
+  either a rule was broken or the sync client did something, and neither is for
+  a session to resolve. The same event in 04_working/ is just a draft being
+  drafted.
+- Files sitting in _inbox/ are counted and reported. The inbox is a staging
+  area, not a zone: anything in it is unfiled and authoritative for nothing.
+- The exchange log (03_exchange/LOG.jsonl and LOG.md) is exempt from the
+  frozen-zone alarm when it CHANGES, because appending to it is the ordinary
+  case (R4); it is not exempt when it goes MISSING.
 - Both modes also print WARNINGS: suspected sync-conflict copies, and names
   OneDrive/SharePoint will refuse to sync. Warnings never change the exit code
   on their own — they are for the human to resolve.
@@ -61,7 +73,7 @@ import re
 import sys
 from datetime import datetime, timezone
 
-SKIP_DIRS = {"_to_delete", ".git"}
+SKIP_DIRS = {"_to_delete", ".git", "06_temp"}
 SKIP_FILES = {".DS_Store", "Icon\r", "desktop.ini", "Thumbs.db"}
 # Office leaves owner-lock files (~$name.docx) and save-temps (~WRL0001.tmp)
 # behind; LibreOffice leaves .~lock.name#. None of them are project content,
@@ -73,12 +85,53 @@ SKIP_SUFFIXES = (".tmp", ".laccdb", ".partial", ".crdownload")
 SKIP_PATHS = {"00_AI_context/INDEX.md", "00_AI_context/MANIFEST.json"}
 
 # Frozen zones (R1). A file that changes or vanishes in one of these is an
-# alarm; the same event in 03_working/ is a draft being drafted.
-FROZEN_DIRS = ("01_basis/", "02_exchange/")
+# alarm; the same event in 04_working/ is a draft being drafted.
+FROZEN_DIRS = ("01_contract/", "02_basis/", "03_exchange/")
+
+# Staging for arrivals that have not been filed yet (R3). Not a zone: nothing
+# in it is authoritative, and it is meant to be emptied.
+INBOX_DIR = "_inbox/"
+
+# The exchange log lives inside a frozen zone but is the record OF that zone,
+# not a document in it: every ingestion and every issue appends to it (R4). Its
+# growth is routine and must not raise the frozen-zone alarm, or the alarm
+# fires on the ordinary case and stops being read. Losing the file is a
+# different matter, so the exemption covers CHANGED only, never MISSING.
+FROZEN_EXEMPT = ("03_exchange/LOG.jsonl", "03_exchange/LOG.md")
+
+# The schema (README). Checked by name because the manifest cannot see them:
+# it records files, and an empty directory holds none. Recreating one is safe
+# — it holds nothing — but that it went missing is worth a line, and if it
+# held files those show up as MISSING alongside.
+REQUIRED_DIRS = (
+    "00_AI_context", "00_AI_context/datasets", "00_AI_context/registers",
+    "01_contract", "01_contract/upstream", "01_contract/downstream",
+    "02_basis",
+    "03_exchange", "03_exchange/received", "03_exchange/issued",
+    "04_working", "04_working/drafts", "04_working/analysis",
+    "04_working/_extracted",
+    "05_tools", "06_temp", "_inbox", "_to_delete",
+)
 
 
 def frozen(rel):
     return rel.startswith(FROZEN_DIRS)
+
+
+def frozen_change_alarm(rel):
+    return frozen(rel) and rel not in FROZEN_EXEMPT
+
+
+def report_inbox(paths):
+    """Anything sitting unfiled is worth saying out loud, every time."""
+    waiting = sorted(p for p in paths if p.startswith(INBOX_DIR))
+    if not waiting:
+        return
+    print(f"\n{len(waiting)} file(s) in {INBOX_DIR} awaiting triage (R3):")
+    for p in waiting[:20]:
+        print(f"  INBOX     {p}")
+    if len(waiting) > 20:
+        print(f"  … and {len(waiting) - 20} more")
 
 
 # Names SharePoint/OneDrive refuse to sync. Characters first, then the
@@ -250,6 +303,20 @@ def print_warnings(conflicts, names):
               "resolve, not the session's (R8).")
 
 
+def missing_dirs(root):
+    return [d for d in REQUIRED_DIRS
+            if not os.path.isdir(os.path.join(root, d))]
+
+
+def print_missing_dirs(missing):
+    if missing:
+        print("SCHEMA — directories missing (README schema). Recreate them "
+              "empty; if they held files, --diff lists those as MISSING:")
+        for d in missing:
+            print(f"  MISSING DIR  {d}/")
+        print()
+
+
 def diff(root, args):
     manifest = load_manifest(root)
     if manifest is None:
@@ -262,11 +329,13 @@ def diff(root, args):
     added = sorted(set(new) - set(old))
     missing = sorted(set(old) - set(new))
     changed = sorted(p for p in set(old) & set(new) if differs(old[p], new[p]))
+    gone = missing_dirs(root)
+    print_missing_dirs(gone)
 
     # Report frozen-zone movement first and by itself: it means either a rule
     # was broken or the sync client did something, and neither is for a session
     # to resolve. Everything else is routine.
-    frozen_changed = [p for p in changed if frozen(p)]
+    frozen_changed = [p for p in changed if frozen_change_alarm(p)]
     frozen_missing = [p for p in missing if frozen(p)]
     if frozen_changed or frozen_missing:
         print("FROZEN ZONE MOVED — stop and raise this with the user (R1):")
@@ -279,21 +348,25 @@ def diff(root, args):
     for p in added:
         print(f"NEW      {p}")
     for p in changed:
-        if not frozen(p):
+        if not frozen_change_alarm(p):
             print(f"CHANGED  {p}")
     for p in missing:
         if not frozen(p):
             print(f"MISSING  {p}")
-    if not (added or changed or missing):
+    dirty = bool(added or changed or missing or gone)
+    if not dirty:
         print(f"Clean — {len(new)} files match the manifest "
               f"(baseline {manifest.get('generated', '?')}"
               f"{', hashed' if with_hash else ''}).")
     else:
         print(f"\n{len(added)} new, {len(changed)} changed, {len(missing)} "
               f"missing — {len(frozen_changed) + len(frozen_missing)} in a "
-              f"frozen zone.")
+              f"frozen zone"
+              + (f"; {len(gone)} schema director"
+                 f"{'y' if len(gone) == 1 else 'ies'} missing." if gone else "."))
+    report_inbox(new)
     print_warnings(*warnings_for(new, args.device))
-    return 0 if not (added or changed or missing) else 1
+    return 1 if dirty else 0
 
 
 def load_descriptions(root):
@@ -344,7 +417,7 @@ def regenerate(root, name, args):
     lines = [
         f"# INDEX — {name}",
         "",
-        f"Generated {ts} by `04_tools/update_index.py`. "
+        f"Generated {ts} by `05_tools/update_index.py`. "
         f"{len(files)} files. Edit the one-line descriptions freely — they are "
         "preserved across regenerations.",
         "",
@@ -361,7 +434,10 @@ def regenerate(root, name, args):
         f.write("\n".join(lines))
     print(f"INDEX.md and MANIFEST.json regenerated — {len(files)} files"
           f"{' (hashed)' if with_hash else ''}.")
-    print_warnings(*warnings_for({f["path"] for f in files}, args.device))
+    print_missing_dirs(missing_dirs(root))
+    paths = {f["path"] for f in files}
+    report_inbox(paths)
+    print_warnings(*warnings_for(paths, args.device))
     return 0
 
 

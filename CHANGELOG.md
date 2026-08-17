@@ -23,6 +23,153 @@ Semantic versioning, read for a template rather than a library:
 - **patch** — fixes to the scripts or the documentation, with no change to the
   structure or the rules.
 
+## cowork-contractor 0.3.0 — 2026-08-18
+
+The log made a record. 0.2.0 introduced `LOG.jsonl` and called it the record;
+two outside reviews of that version, cross-checked, agreed on the weakness:
+`log.py` accepted whatever it was given — `2026-99-99`, a status of `banana`,
+a row saying `in` for a file under `issued/`, a path that escaped the
+repository — and a failed `--supersedes` left the new row written and the old
+one untouched. This version closes that, adds what the schema was missing to
+answer "what is owed" honestly, and brings the rules into line with what the
+tools now do. Still below 1.0.0: it has not run on a live project.
+
+### Changed — `log.py add` refuses what it cannot stand behind
+
+Refused, with nothing written: a date that is not a real calendar date
+(`--date` is now required — a default of today was a guessed date by another
+name); a status or action outside the vocabulary; a path that is absolute or
+escapes the repository; a path under `03_exchange/` whose `received/`/`issued/`
+folder contradicts `--dir`, or whose party folder contradicts `--party` —
+direction and party are lookups (R1), and the row and the tree now agree by
+construction; a path that points at nothing, unless `--pending` says the file
+is genuinely still on its way; a `--supersedes` or `--answers` id that does not
+exist. Everything is checked before anything is written, and the new row and
+the rows it changes go down in one atomic replacement (`os.replace`) — a failed
+add, or a crash mid-write, leaves the log exactly as it was.
+
+Flagged, and written: a type outside the usual list; a party label not in
+PARTIES.md's Register table; superseding a row already superseded, or of a
+different party; answering a row that is not open. Warnings are for the human.
+
+### Changed — a row has two states, not one
+
+`status` is the document's — `current`, `superseded by #n`, `withdrawn` — and
+`action` is what is owed on it — `open`, `answered by #n`, `closed`, or nothing.
+An issued letter that asks a question is `current` and `open` at once; the old
+single column could hold one or the other, and the Outstanding list was wrong
+whenever it mattered. `--due` records when the action is due; the Outstanding
+section of `LOG.md` now splits "we owe" from "they owe" and shows the date.
+
+Two more fields for honesty rather than function: `recorded` (when the row was
+written, set by the script) and `backfilled` (`--backfilled`, for rows written
+from the documents after the event — a batch off an old drive). R4 used to say
+rows are never reconstructed; they sometimes must be, and the honest form is a
+reconstruction that says so. A `†` marks them in the rendered table.
+
+`set` changes `status`, `action`, `due` and `note` (appended, never replaced),
+and fills the path of a `--pending` row once. Every change is kept in the row's
+`history` — field, from, to, when. Nothing else on a row is ever rewritten.
+
+### Added — `log.py check`, `--answers`, and a few conveniences
+
+`check` reads the log against the tree and against itself: files in
+`03_exchange/received/`, `03_exchange/issued/` or `01_contract/` that no row
+mentions; rows whose path points at nothing; duplicate ids; dangling `#n`
+references; rows whose direction or party disagrees with their folder; party
+labels not in PARTIES.md; open actions past their due date. It is part of the
+session-start scan (CLAUDE.md step 4). A row whose path is a folder covers
+everything under it — a transmittal that brought thirty drawings can be one
+event.
+
+`--answers ID` mirrors `--supersedes ID`; `query --action open`, `--overdue`;
+`query` exits 0 on an empty result, which for `--action open` is the healthy
+state; the type vocabulary gains `contract`, `amendment`, `notice`, `rfi`,
+`application`, `certificate`, `claim`.
+
+### Changed — what gets a log row, in the rules
+
+R3 said every arrival gets a row; the tool requires a direction and a party;
+`02_basis/` material has neither. Now: exchange is always logged; an executed
+instrument is logged (`--type contract`, dated the day it became executed);
+basis material gets its context md and its INDEX line and no row. The date on
+a row is the date on the document — letter date, title block, sent line — never
+a file timestamp; a batch filed after the event is backfill, marked as such.
+
+### Changed — the scan, and the rules about it
+
+- `06_temp/` is not walked: disposable scratch was reported NEW on every scan,
+  and the rules told a session to ingest it.
+- The schema's directories are checked by name (`MISSING DIR`, exit 1), as in
+  cowork-consultant 2.0.3 — a manifest of files cannot see an empty zone go.
+- R7 and CLAUDE.md now say what the tool always did: `LOG.jsonl` and `LOG.md`
+  changing is the ordinary case, never the frozen-zone alarm; MISSING still is.
+  And NEW/CHANGED in `04_working/` and `00_AI_context/` is expected — the old
+  wording had NEW anywhere calling for ingestion.
+- `extract_text.py` and `update_index.py` carry the cowork-consultant 2.0.3
+  fixes: a failed extraction is retried rather than cached as current, sheets
+  keep Excel row numbers and column letters, `date1904` is honoured, PDFs
+  report their textless pages, orphaned extractions are listed.
+
+### Changed — the rules where they over-claimed or under-said
+
+- R1: where a file is filed asserts nothing about its legal effect — a
+  purchase order may form a contract; the folder records who sent it and
+  whether it created an instrument or acted under one, and no more. And the
+  documents an instrument incorporates at award (drawings, specification,
+  pricing document) are contract, filed beside it; a later revision of one,
+  sent under the contract, is exchange.
+- R5: the project folder is internal — both sides' contracts, every party's
+  correspondence, the internal position — and nothing in it is shared with a
+  counterparty; what they receive left through `issued/`. R9 no longer
+  describes the synced drive as "for sharing". The user exports the PDF; the
+  tools do not render documents, and the row's path names the PDF.
+- CLAUDE.md: "the contract wins" now continues "and when the contract's own
+  documents disagree, its order-of-precedence clause decides". PROJECT.md's
+  contract section gains the order-of-precedence clause, who may instruct and
+  vary, and the notice clause — recorded, not tracked; a project that needs a
+  notice register keeps one under R11.
+- PARTIES.md: `{{CLIENT}}` is the client's *full name*, not its label — the
+  label is chosen once, short and sync-legal, and the template no longer
+  pre-fills it with `_TBC_` or a company name with spaces. The "who may be
+  written to" table gains the notice method and address, and an authority
+  limit, so a session can tell an instruction from a suggestion.
+- The "Internal-only documents" list moves from `LOG.md` — a generated view in
+  a frozen zone — to PROJECT.md's internal-position section, where it belongs.
+- Email transcripts: if the header and the folder disagree, the folder is the
+  fact; the disagreement is raised, not resolved. Backlog dates come off the
+  documents' faces; only a document with no date waits for the user.
+- `INDEX.md` ships with descriptions for the files the template ships with,
+  so a new project's index is not twelve blank lines. Wording: "no staging
+  step" → "no upload step" (the inbox *is* staging); "SoT files" gone.
+
+### Added — `tests/test_contractor_tools.py`
+
+27 stdlib-only tests that instantiate the template into a temporary directory
+and drive the real scripts: every refusal above with proof that nothing was
+written, the open/answered/superseded chain and its history, `set`'s limits,
+`check`'s findings including hand-damaged JSONL, atomic writes, the inbox
+count, the log exemption, the temp skip, `MISSING DIR`. Run with
+`python3 -m unittest discover tests`; 46 with the consultant's.
+
+### Not done, deliberately
+
+- **Structured registers.** One review argued that an 80-row markdown register
+  has the problem the log had. Not yet: 80 rows is still readable, totals are
+  already declared derived-only, and the moment a live project needs sorting
+  or summing, CSV plus a generated view is a small change — the log tooling is
+  the pattern. Deferred until a live project shows the pain.
+- **Locking, UUIDs, event-sourced status.** Integer `#12` is cited in
+  registers, context mds and WORKLOG entries by design; two machines writing
+  the same file at once produce a sync-conflict copy the scan reports and a
+  duplicate id `check` reports. A stated single-writer rule and `history` on
+  every mutation cover what a locking scheme would, without the machinery.
+- **Time-bar tracking**, still — see 0.2.0. Recording the notice clause is a
+  fact; tracking deadlines against it is a system, and a project builds one
+  under R11 when it needs it.
+- **The consultant's `05_temp/` is still scanned.** 2.0.3 shipped alongside
+  this; the temp skip is a one-line change for its next patch.
+
 ## cowork-consultant 2.0.3 — 2026-08-18
 
 Fixes to the two scripts, prompted by an outside review of the template, and
@@ -131,6 +278,132 @@ step, appending to a markdown table, is what `cowork-contractor`'s `log.py`
 already replaces; the consultant template inherits that once it has proved
 itself there, as a minor release, along with a recorded-at timestamp per row.
 `AGENTS.md` is a new template file and waits for the same release.
+
+## cowork-contractor 0.2.0 — 2026-08-18
+
+The contracting structure, decided. 0.1.0 was a copy of `cowork-consultant`
+with a different name in two lines; this is the first version that is actually
+a template for work performed under a contract, from award onwards, on either
+side of it — a subcontractor with no packages let and a main contractor with
+thirty of them run the same schema, and the difference shows up as an empty
+folder rather than a different structure.
+
+It stays below 1.0.0 until it has been run on a live project. Nothing here is
+expected to change again, but "expected" is not the same as "proved".
+
+### Added — `01_contract/`, and the boundary that makes it decidable
+
+A zone for the instruments that bind: `upstream/` for the contract performed
+under and its executed amendments, `downstream/<party>/` for subcontracts let.
+The contract is what every question resolves against, it is small, and it is
+stable; mixed into general reference material it has to be searched for rather
+than known.
+
+The boundary is a rule, not a judgement: **`01_contract/` holds instruments
+that create or amend a contract. Everything that flows under one is
+`03_exchange/`, by direction.** An instrument came into existence, or a party
+acted under one that already existed — a signed variation addendum is contract,
+a variation instruction is exchange.
+
+A purchase order is therefore an issued document, not a contract instrument. A
+project runs to tens or hundreds of them, for things as small as bolts, and
+filing those among the contracts would bury the four documents that govern the
+work. The consequence worth stating plainly: **direction now has no exception
+for any document type**, which is what keeps R1 a lookup.
+
+### Added — party sub-folders, mandatory from day one
+
+`03_exchange/received/<party>/` and `issued/<party>/`, with the label fixed in
+the new `00_AI_context/PARTIES.md`. `cowork-consultant` offers this as an
+optional adjustment once a project outgrows a flat folder; a works contract
+outgrows it in month two, and adopting the split later means restructuring
+mid-project. Party sits *inside* direction rather than above it, so the
+ours/theirs boundary stays the top-level fact R1 needs it to be.
+
+Labels are permanent and chosen once, because they are written into every path
+and every log row. A renamed party is a broken filter across the whole history.
+
+### Changed — the exchange log is JSONL, with markdown as a view
+
+`03_exchange/LOG.jsonl` is the record: one JSON object per line, one line per
+event. `03_exchange/LOG.md` is generated from it by the new `05_tools/log.py`.
+
+This is a concession to length and only to length. A markdown table cannot be
+filtered, counted or sorted, and every hand-edit risks mangling a column —
+tolerable for the fifty rows a consulting engagement produces, useless for the
+thousands a two-year contract produces. JSONL is queryable in one pass, stays
+diffable, and can be read directly by an agent; the markdown view survives so
+the log is still legible with no tools at all.
+
+Rows are append-only with one exception: `status` may be updated in place, via
+`log.py set`, because status is the one field that legitimately changes — an
+open query gets answered, a revision gets superseded. A row that was wrong is
+corrected by a new row, not by a rewrite.
+
+`log.py` covers `add` (with `--supersedes`, which closes out the previous
+revision in the same command), `set`, `query` and `render`.
+
+### Added — `_inbox/`, and `05_tools/log.py`
+
+`_inbox/` is staging for what has arrived and not been filed: a batch off an
+old drive, an attachment not yet decided about. It is not a zone — nothing in
+it is authoritative, no figure is read from it — and the session-start scan
+counts what is sitting there on every run until it is empty. The alternative to
+a staging area is not tidiness; it is documents left on a desktop.
+
+### Added — R11, registers
+
+`00_AI_context/registers/` holds one md per controlled series: variations,
+RFIs, purchase orders, payment applications. Not a second log. The log answers
+"what happened, in what order"; a register answers "where does this series
+stand, and what is missing" — an RFI with no answer, a variation instructed and
+never valued, an application with no certificate against it. **A register is
+read by its gaps**, so each row cites the log id rather than restating it.
+
+Which registers a project keeps is a project decision, made when the same
+status question gets asked twice. The template ships the mechanism and one
+worked template, and prescribes nothing.
+
+### Changed — zones renumbered, and the scan taught two new things
+
+Inserting `01_contract/` shifts everything after it: `02_basis/`,
+`03_exchange/`, `04_working/`, `05_tools/`, `06_temp/`. Contractor projects and
+consultant projects therefore number their zones differently, which is the cost
+of each template being shaped for its own work.
+
+`update_index.py` follows: three frozen zones instead of two, a count of what
+is waiting in `_inbox/` on every run, and one exemption. The log files change
+on every ingestion and every issue, so a plain reading of R1 would fire the
+frozen-zone alarm on the most ordinary event in the project — and an alarm that
+fires routinely stops being read. `LOG.jsonl` and `LOG.md` are exempt from the
+alarm when they **change**, and deliberately not exempt when they go
+**missing**: growth is expected, disappearance never is.
+
+`extract_text.py` mirrors all three frozen zones and classifies `.jsonl` as
+text, so the log reports as "already text" rather than as an unreadable format.
+
+### Changed — `bin/new_project.py` discovers the tools directory
+
+It looked for `04_tools/` by name, which this template no longer has.
+Now it matches `NN_tools`, so a template that renumbers its zones needs no
+change here — and a template with no tools directory fails with a sentence
+rather than a traceback over a half-written folder.
+
+### Not done, deliberately
+
+- **No notice or time-bar machinery.** Deadline tracking shaped to one contract
+  form would be wrong for every other, and this template is for working with
+  the documents — reports, letters, BoQs, drawings — not for administering a
+  particular set of clauses. A project that needs a notice register builds one
+  under R11.
+- **No zone for daily site records.** Site diaries, labour returns and progress
+  photos were considered and rejected: they are rarely the material this
+  structure is for, and one that matters is filed as any other document is. A
+  zone that is usually empty teaches people to ignore zones.
+- **The two templates still keep their own copy of the tooling.** Same reason
+  as at 0.1.0, and stronger now that the contractor scripts have diverged: a
+  shared script is much harder to split later than two near-identical ones are
+  to merge.
 
 ## cowork-contractor 0.1.0 — 2026-08-13
 

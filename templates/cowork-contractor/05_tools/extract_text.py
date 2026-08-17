@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """extract_text.py — build the searchable text layer for the frozen zones (R10).
 
-    python3 04_tools/extract_text.py            # extract what is new or changed
-    python3 04_tools/extract_text.py --report   # what is filed, and in what state
-    python3 04_tools/extract_text.py --force    # re-extract everything
-    python3 04_tools/extract_text.py /path/to/repo
+    python3 05_tools/extract_text.py            # extract what is new or changed
+    python3 05_tools/extract_text.py --report   # what is filed, and in what state
+    python3 05_tools/extract_text.py --force    # re-extract everything
+    python3 05_tools/extract_text.py /path/to/repo
 
 On Windows use `py -3` in place of `python3`.
 
@@ -17,13 +17,14 @@ and spreadsheets that is the entire searchable surface: an agent cannot grep a
 binary, and "which document says X" cannot be answered at all without opening
 all of them.
 
-This script mirrors the frozen zones — `01_basis/` and `02_exchange/`, both
-directions — into `03_working/_extracted/` as one markdown file per source
-document, keeping the full zone-relative path so the two cannot collide. The
+This script mirrors the frozen zones — `01_contract/`, `02_basis/` and
+`03_exchange/`, both directions — into `04_working/_extracted/` as one markdown
+file per source document, keeping the full zone-relative path so the zones
+cannot collide. The
 result is greppable, cheap to read, and rebuilt by one command, so it never
 becomes something you have to back up.
 
-It reads only the frozen zones and writes only into `03_working/_extracted/`.
+It reads only the frozen zones and writes only into `04_working/_extracted/`.
 It cannot modify a source document (R1).
 
 The extraction is an index, not a substitute (R10): it drops layout, page
@@ -35,17 +36,31 @@ Formats
 -------
 .docx/.dotx  paragraphs, headings, tables, tracked insertions and deletions,
              comments with their authors, and the document's core properties
-.xlsx/.xlsm  every sheet, its used range, and its cells rendered as a table,
-             with formulas shown alongside their cached results
+.xlsx/.xlsm  every sheet, its used range, and its cells rendered as a table
+             with Excel's own coordinates — row numbers down the side, column
+             letters across the top — with formulas shown alongside their
+             cached results; both date systems (1900 and 1904) are honoured
 .pptx/.potx  slide text in slide order, plus speaker notes
-.pdf         page-by-page text, if pypdf is installed; flags a PDF that has no
-             text layer as needing OCR
+.pdf         page-by-page text, if pypdf is installed; records which pages have
+             no text layer and flags a scanned or mixed PDF as needing OCR
 
 Office formats are handled with the standard library alone — .docx, .xlsx and
 .pptx are ZIP archives of XML. Nothing needs installing. PDFs are the exception:
 they need `pypdf` (`pip install pypdf`). Without it, PDFs still get a stub
 recording that they were seen and why they were not read, so the gap is visible
-rather than silent.
+rather than silent — and the stub is retried on every run until it succeeds.
+
+Freshness
+---------
+A run redoes an extraction when its source changed (size or mtime), when the
+previous attempt failed for a reason that may since have been fixed (a missing
+library, a bug), when this script's output format changed since it was made
+(EXTRACTOR_VERSION below), or when a sheet was truncated at a different
+`--max-rows`. Everything else is skipped. `--force` redoes all of it. `--report`
+shows each file's state and why it is stale, and lists extractions whose
+source has gone — they still answer a grep, for a document the project no
+longer holds, so they are worth knowing about; per R8 they are reported, never
+deleted.
 
 Rights-managed files
 --------------------
@@ -65,12 +80,28 @@ import zipfile
 from datetime import datetime, timedelta, timezone
 from xml.etree import ElementTree as ET
 
-# The frozen zones (R1) are what gets extracted: reference material and both
-# directions of the exchange. 03_working/ is not extracted — it is already
-# yours, already mutable, and extracting a live draft would only produce a
-# stale copy of something that changes hourly.
-SOURCE_DIRS = ("01_basis", "02_exchange")
-OUT_DIR = os.path.join("03_working", "_extracted")
+# The frozen zones (R1) are what gets extracted: the contract instruments,
+# reference material, and both directions of the exchange. 04_working/ is not
+# extracted — it is already yours, already mutable, and extracting a live draft
+# would only produce a stale copy of something that changes hourly. _inbox/ is
+# not extracted either: nothing in it is filed, so nothing in it is quotable.
+SOURCE_DIRS = ("01_contract", "02_basis", "03_exchange")
+OUT_DIR = os.path.join("04_working", "_extracted")
+
+# Bumped whenever the shape of the output changes — a new column, a new
+# front-matter field, a corrected reconstruction. Every extraction records the
+# version it was made with, and one made with an older version is redone on the
+# next run, so a fix here reaches an existing project as soon as its copy of
+# this script is updated. Extractions from before this field existed count as
+# version 1.
+EXTRACTOR_VERSION = 2
+# Outcomes worth retrying: what failed (a missing library, a bug) may have been
+# fixed since. Everything else — an encrypted file, a scan, a rights-managed
+# document — is a fact about the document, and stands until the file changes.
+RETRY_FLAGS = {"not-extracted", "extract-error"}
+# A PDF page with fewer characters than this has a page number and a running
+# header, not content — it is counted as having no text layer.
+TEXTLESS_PAGE_CHARS = 50
 
 W = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
 A = "{http://schemas.openxmlformats.org/drawingml/2006/main}"
@@ -86,7 +117,8 @@ WORD_EXT = {".docx", ".docm", ".dotx", ".dotm"}
 EXCEL_EXT = {".xlsx", ".xlsm", ".xltx", ".xltm"}
 PPT_EXT = {".pptx", ".pptm", ".potx", ".potm"}
 PDF_EXT = {".pdf"}
-TEXT_EXT = {".txt", ".md", ".csv", ".tsv", ".json", ".xml", ".yml", ".yaml"}
+TEXT_EXT = {".txt", ".md", ".csv", ".tsv", ".json", ".jsonl", ".xml", ".yml",
+            ".yaml"}
 # Extensions worth naming in the report rather than treating as a mystery.
 OPAQUE_EXT = {
     ".dwg": "CAD drawing", ".dxf": "CAD exchange", ".dgn": "MicroStation drawing",
@@ -115,6 +147,20 @@ def read_xml(zf, name):
 
 def squeeze(text):
     return re.sub(r"[ \t]+", " ", (text or "")).strip()
+
+
+def page_ranges(pages):
+    """[1, 2, 3, 7, 9, 10] → '1-3, 7, 9-10'."""
+    out, start, prev = [], None, None
+    for n in list(pages) + [None]:
+        if start is None:
+            start = prev = n
+        elif n is not None and n == prev + 1:
+            prev = n
+        else:
+            out.append(str(start) if start == prev else f"{start}-{prev}")
+            start = prev = n
+    return ", ".join(out)
 
 
 def is_ole(path):
@@ -529,6 +575,30 @@ def col_index(ref):
     return n - 1
 
 
+def col_letter(idx):
+    """0 → A, 25 → Z, 26 → AA — the inverse of col_index."""
+    out = ""
+    idx += 1
+    while idx > 0:
+        idx, r = divmod(idx - 1, 26)
+        out = chr(65 + r) + out
+    return out
+
+
+def uses_1904_dates(zf):
+    """True when the workbook counts dates from 1904 rather than 1900.
+
+    Legacy Excel for Mac and some exporters write `workbookPr/@date1904`. The
+    same serial then names a day 1,462 days later, so a workbook read with the
+    wrong epoch shows plausible dates that are four years off.
+    """
+    wb = read_xml(zf, "xl/workbook.xml")
+    if wb is None:
+        return False
+    pr = wb.find(f"{S}workbookPr")
+    return pr is not None and (pr.get("date1904") or "").lower() in ("1", "true")
+
+
 # Excel's built-in date and date-time number formats.
 BUILTIN_DATE_IDS = (set(range(14, 23)) | set(range(27, 37))
                     | {45, 46, 47} | set(range(50, 59)))
@@ -576,22 +646,32 @@ def is_date_style(style_index, xfs, custom):
     return bool(re.search(r"[yd]", code, re.I))
 
 
-def excel_date(raw):
-    """Excel serial → ISO date. Serial 60 is Excel's fictional 1900-02-29."""
+def excel_date(raw, date1904=False):
+    """Excel serial → ISO date, in either of Excel's two date systems.
+
+    The 1900 system counts from 1899-12-31 and includes a fictional 1900-02-29
+    at serial 60 (kept for Lotus 1-2-3 compatibility); the 1904 system counts
+    from 1904-01-01 and has no such day.
+    """
     try:
         serial = float(raw)
     except (TypeError, ValueError):
         return None
-    if serial <= 0:
-        return None
-    base = datetime(1899, 12, 30) if serial > 59 else datetime(1899, 12, 31)
-    dt = base + timedelta(days=serial)
+    if date1904:
+        if serial < 0:
+            return None
+        dt = datetime(1904, 1, 1) + timedelta(days=serial)
+    else:
+        if serial <= 0:
+            return None
+        base = datetime(1899, 12, 30) if serial > 59 else datetime(1899, 12, 31)
+        dt = base + timedelta(days=serial)
     if abs(serial - round(serial)) < 1e-9:
         return dt.strftime("%Y-%m-%d")
     return dt.strftime("%Y-%m-%d %H:%M")
 
 
-def cell_value(c, strings, xfs=(), custom=None):
+def cell_value(c, strings, xfs=(), custom=None, date1904=False):
     kind = c.get("t", "n")
     if kind == "inlineStr":
         node = c.find(f"{S}is")
@@ -606,7 +686,7 @@ def cell_value(c, strings, xfs=(), custom=None):
     if kind == "b":
         return "TRUE" if raw == "1" else "FALSE"
     if kind == "n" and raw and is_date_style(c.get("s"), xfs, custom or {}):
-        as_date = excel_date(raw)
+        as_date = excel_date(raw, date1904)
         if as_date:
             return as_date
     return squeeze(raw)
@@ -617,6 +697,9 @@ def extract_xlsx(path, res, max_rows):
         res.meta.update(core_properties(zf))
         strings = shared_strings(zf)
         xfs, custom = load_number_formats(zf)
+        date1904 = uses_1904_dates(zf)
+        if date1904:
+            res.meta["date_system"] = 1904
         sheets = sheet_targets(zf)
         res.meta["sheets"] = len(sheets)
         formulas = 0
@@ -642,12 +725,23 @@ def extract_xlsx(path, res, max_rows):
                 res.line(f"Merged ranges: {', '.join(merges)}")
                 res.line()
 
+            # Rows keep their Excel numbers and blank rows are dropped rather
+            # than rendered — the number carries the gap, and a gap is usually
+            # where one table on the sheet ends and the next begins. Column
+            # letters head the table for the same reason: a cell in the text
+            # layer can be named the way the sheet names it, and the first
+            # populated row is not assumed to be a header, because on a real
+            # sheet it rarely is.
             grid, sheet_formulas = [], []
-            for row in root.iter(f"{S}row"):
+            for n, row in enumerate(root.iter(f"{S}row"), 1):
+                try:
+                    rownum = int(row.get("r") or n)
+                except ValueError:
+                    rownum = n
                 cells = {}
                 for c in row.findall(f"{S}c"):
                     idx = col_index(c.get("r", ""))
-                    value = cell_value(c, strings, xfs, custom)
+                    value = cell_value(c, strings, xfs, custom, date1904)
                     f = c.find(f"{S}f")
                     if f is not None:
                         formulas += 1
@@ -658,8 +752,7 @@ def extract_xlsx(path, res, max_rows):
                         if c.get("s") and not xfs:
                             styled_without_formats = True
                 if cells:
-                    width = max(cells) + 1
-                    grid.append([cells.get(i, "") for i in range(width)])
+                    grid.append((rownum, cells))
 
             if not grid:
                 res.line("_Empty sheet._")
@@ -667,20 +760,20 @@ def extract_xlsx(path, res, max_rows):
                 continue
 
             shown = grid[:max_rows]
-            width = max(len(r) for r in shown)
-            for r in shown:
-                r += [""] * (width - len(r))
-            res.line("| " + " | ".join(
-                c.replace("|", "\\|") for c in shown[0]) + " |")
-            res.line("|" + "|".join([" --- "] * width) + "|")
-            for r in shown[1:]:
-                res.line("| " + " | ".join(
-                    c.replace("|", "\\|") for c in r) + " |")
+            width = max(max(cells) + 1 for _, cells in shown)
+            res.line("| # | " + " | ".join(col_letter(i) for i in range(width))
+                     + " |")
+            res.line("|" + "|".join([" --- "] * (width + 1)) + "|")
+            for rownum, cells in shown:
+                res.line(f"| {rownum} | " + " | ".join(
+                    cells.get(i, "").replace("|", "\\|") for i in range(width))
+                    + " |")
             res.line()
             if len(grid) > max_rows:
                 res.flag("truncated")
-                res.line(f"_{len(grid) - max_rows} further rows not shown "
-                         f"(--max-rows {max_rows})._")
+                res.meta["max_rows"] = max_rows
+                res.line(f"_{len(grid) - max_rows} further populated rows not "
+                         f"shown (--max-rows {max_rows})._")
                 res.line()
             if sheet_formulas:
                 res.line(f"<details><summary>{len(sheet_formulas)} formulas"
@@ -794,25 +887,32 @@ def extract_pdf(path, res, reader_cls):
             return
     pages = list(reader.pages)
     res.meta["pages"] = len(pages)
-    total = 0
+    textless = []
     for i, page in enumerate(pages, 1):
         try:
-            text = page.extract_text() or ""
+            text = (page.extract_text() or "").strip()
         except Exception as exc:
-            text = ""
             res.flag("page-extract-error")
             res.line(f"## Page {i}")
             res.line()
             res.line(f"_Extraction failed: {exc}_")
             res.line()
             continue
-        total += len(text.strip())
+        if len(text) < TEXTLESS_PAGE_CHARS:
+            textless.append(i)
         res.line(f"## Page {i}")
         res.line()
-        res.line(text.strip() or "_(no text layer on this page)_")
+        res.line(text or "_(no text layer on this page)_")
         res.line()
-    if pages and total / len(pages) < 50:
-        res.flag("likely-scanned-needs-ocr")
+    # Judged page by page, not on the document's average: a report with one
+    # typed cover page and forty scanned pages averages as "has text", and the
+    # dataset's context md wants to record exactly which pages need OCR.
+    if textless:
+        res.meta["textless_pages"] = page_ranges(textless)
+        if len(textless) == len(pages):
+            res.flag("likely-scanned-needs-ocr")
+        else:
+            res.flag("mixed-text-and-scanned")
 
 
 # --------------------------------------------------------------------------
@@ -844,7 +944,7 @@ def extract_one(path, kind, max_rows, reader_cls):
             res.line()
             res.line("Such a file can only be opened by authenticated Office — "
                      "no Python library and no agent can read it. Save a "
-                     "decrypted copy into `03_working/` for analysis, or "
+                     "decrypted copy into `04_working/` for analysis, or "
                      "record in the dataset's context md that the content is "
                      "unavailable and why.")
             return res
@@ -876,7 +976,8 @@ def extract_one(path, kind, max_rows, reader_cls):
 def front_matter(rel, st, res):
     lines = ["---", f"source: {rel}", f"source_size: {st.st_size}",
              f"source_mtime: {round(st.st_mtime, 2)}", f"extracted: {now()}",
-             f"extractor: {res.extractor}"]
+             f"extractor: {res.extractor}",
+             f"extractor_version: {EXTRACTOR_VERSION}"]
     for key, value in res.meta.items():
         lines.append(f"{key}: {value}")
     if res.flags:
@@ -910,10 +1011,25 @@ def read_front_matter(path):
     return out
 
 
-def is_current(out_path, st):
+def staleness(out_path, st, max_rows):
+    """Why an existing extraction has to be redone — or None if it is current.
+
+    Size and mtime alone are not enough: a stub written because pypdf was
+    missing matches its source perfectly and would be "current" forever, and
+    so would output made by an older version of this script.
+    """
     fm = read_front_matter(out_path)
-    return (fm.get("source_size") == str(st.st_size)
-            and fm.get("source_mtime") == str(round(st.st_mtime, 2)))
+    if (fm.get("source_size") != str(st.st_size)
+            or fm.get("source_mtime") != str(round(st.st_mtime, 2))):
+        return "source changed"
+    flags = {f.strip() for f in fm.get("flags", "").split(",")}
+    if flags & RETRY_FLAGS:
+        return "previous attempt failed"
+    if fm.get("extractor_version", "1") != str(EXTRACTOR_VERSION):
+        return "extractor updated"
+    if "truncated" in flags and fm.get("max_rows") != str(max_rows):
+        return "row limit changed"
+    return None
 
 
 def sources(root):
@@ -934,7 +1050,36 @@ def output_path(root, rel):
     return os.path.join(root, OUT_DIR, rel + ".md")
 
 
-def report(root, reader_cls):
+def orphans(root):
+    """Extractions whose source is gone — moved, renamed or staged for deletion.
+
+    An orphan still answers a grep, and an answer from a document the project
+    no longer holds is worse than no answer. Reported, never deleted (R8).
+    """
+    base = os.path.join(root, OUT_DIR)
+    for dirpath, dirnames, filenames in os.walk(base):
+        dirnames[:] = sorted(d for d in dirnames if not d.startswith("."))
+        for fn in sorted(filenames):
+            if fn.startswith(".") or not fn.endswith(".md"):
+                continue
+            rel = os.path.relpath(os.path.join(dirpath, fn), base)
+            rel = rel.replace(os.sep, "/")
+            if not os.path.isfile(os.path.join(root, rel[:-3])):
+                yield rel
+
+
+def print_orphans(root):
+    found = list(orphans(root))
+    if found:
+        print(f"\nOrphaned — the source of these is gone, but they still answer "
+              f"a grep. Move them to _to_delete/ (R8), or find where the source "
+              f"went:")
+        for rel in found:
+            print(f"  {OUT_DIR}/{rel}")
+    return found
+
+
+def report(root, reader_cls, max_rows):
     rows = []
     for full, rel in sources(root):
         ext = os.path.splitext(full)[1].lower()
@@ -950,11 +1095,13 @@ def report(root, reader_cls):
             fm = read_front_matter(out_path)
             flags = fm.get("flags", "")
             state = flags if flags else "extracted"
-            if not is_current(out_path, os.stat(full)):
-                state += " — STALE"
+            why = staleness(out_path, os.stat(full), max_rows)
+            if why:
+                state += f" — STALE ({why})"
         rows.append((rel, state))
     if not rows:
         print(f"No files under {' / '.join(SOURCE_DIRS)}.")
+        print_orphans(root)
         return 0
     width = max(len(r[0]) for r in rows)
     print(f"{'source'.ljust(width)}  state")
@@ -963,6 +1110,7 @@ def report(root, reader_cls):
         print(f"{rel.ljust(width)}  {state}")
     if reader_cls is None and any(r[0].lower().endswith(".pdf") for r in rows):
         print("\npypdf is not installed — PDFs cannot be read. `pip install pypdf`.")
+    print_orphans(root)
     return 0
 
 
@@ -974,9 +1122,11 @@ def main():
     ap.add_argument("--force", action="store_true",
                     help="re-extract even when the output is current")
     ap.add_argument("--report", action="store_true",
-                    help="list SoT files and their extraction state; write nothing")
+                    help="list frozen-zone files and their extraction state; write nothing")
     ap.add_argument("--max-rows", type=int, default=200,
-                    help="rows per spreadsheet sheet to render (default 200)")
+                    help="populated rows per spreadsheet sheet to render "
+                         "(default 200); a sheet that was truncated is "
+                         "re-rendered when this changes")
     args = ap.parse_args()
 
     root = (os.path.abspath(os.path.expanduser(args.root)) if args.root
@@ -986,33 +1136,45 @@ def main():
 
     reader_cls = load_pypdf()
     if args.report:
-        return report(root, reader_cls)
+        return report(root, reader_cls, args.max_rows)
 
-    written = skipped = 0
-    flagged = []
+    written = skipped = failed = 0
+    flagged, redone = [], {}
     for full, rel in sources(root):
         kind = classify(os.path.splitext(full)[1].lower())
         if kind in ("text", "opaque"):
             continue
         out_path = output_path(root, rel)
         st = os.stat(full)
-        if not args.force and os.path.exists(out_path) and is_current(out_path, st):
-            skipped += 1
-            continue
+        if os.path.exists(out_path):
+            why = "forced" if args.force else staleness(out_path, st, args.max_rows)
+            if why is None:
+                skipped += 1
+                continue
+            redone[why] = redone.get(why, 0) + 1
         res = extract_one(full, kind, args.max_rows, reader_cls)
         os.makedirs(os.path.dirname(out_path), exist_ok=True)
         with open(out_path, "w", encoding="utf-8") as f:
             f.write("\n".join(front_matter(rel, st, res) + [""] + res.body) + "\n")
-        written += 1
+        if set(res.flags) & RETRY_FLAGS:
+            failed += 1
+        else:
+            written += 1
         if res.flags:
             flagged.append((rel, ", ".join(res.flags)))
 
-    print(f"Extracted {written} file(s), {skipped} already current → {OUT_DIR}/")
+    summary = f"Extracted {written} file(s), {skipped} already current"
+    if failed:
+        summary += f", {failed} not extracted (will retry next run)"
+    print(f"{summary} → {OUT_DIR}/")
+    if redone:
+        print("  redone: " + ", ".join(f"{n} {why}" for why, n in redone.items()))
     if flagged:
         print("\nFlagged — record these in the dataset's context md (R2):")
         for rel, flags in flagged:
             print(f"  {rel}  [{flags}]")
-    if written:
+    print_orphans(root)
+    if written or failed:
         print("\nRun update_index.py to bring INDEX.md and MANIFEST.json up to date.")
     return 0
 

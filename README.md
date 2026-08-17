@@ -17,7 +17,7 @@ scan that forces it to notice what changed since last time.
 | Template | Version | Use it for |
 |---|---|---|
 | [`cowork-consultant`](templates/cowork-consultant) | 2.0.3 | Consulting engagements — any project that exchanges documents with another party: inputs arrive, work happens, documents are issued. |
-| [`cowork-contractor`](templates/cowork-contractor) | 0.1.0 | Contracting work. **Not ready** — currently an unmodified copy of `cowork-consultant`, placed so its structure can be developed in the open. Do not start a real project from it yet. |
+| [`cowork-contractor`](templates/cowork-contractor) | 0.3.0 | Work performed under a contract, from award onwards — either tier, main or sub. Adds a contract zone, party sub-folders, a queryable exchange log and registers. Below 1.0 until it has been run on a live project. |
 
 Templates are versioned independently and each carries its own `VERSION` file;
 see [Versioning](#versioning). Pick one with `--template`.
@@ -78,6 +78,35 @@ the project unable to say what was sent, to whom, or under what cover.
 
 The ten rules that formalise this are in
 [`templates/cowork-consultant/README.md`](templates/cowork-consultant/README.md).
+
+### What `cowork-contractor` changes
+
+The tree above is `cowork-consultant`'s. The contracting template keeps every
+one of those four ideas and adds what a multi-year works contract needs that a
+consulting engagement does not:
+
+- **`01_contract/`** — the instruments that bind, `upstream/` and
+  `downstream/`, separate from general reference material. The boundary is a
+  rule rather than a judgement: instruments that *create or amend* a contract
+  live here; everything that flows *under* one — instructions, variations,
+  purchase orders, notices — is exchange, filed by direction. A purchase order
+  is an issued document, so direction keeps its no-exceptions property.
+- **Party sub-folders** under `received/` and `issued/`, mandatory from day
+  one, with the labels fixed in `PARTIES.md`. Party sits inside direction, not
+  above it.
+- **A queryable log.** `LOG.jsonl` is the record, `LOG.md` a generated view of
+  it, and `05_tools/log.py` adds, updates, queries, checks and renders — and
+  refuses a row that contradicts the tree. A markdown table is fine for the
+  fifty rows an engagement produces and useless for the thousands a contract
+  produces.
+- **Registers** (`00_AI_context/registers/`) for controlled series — variations,
+  RFIs, POs, payment applications. The log says what happened; a register says
+  where a series stands, and is read by its gaps.
+- **`_inbox/`** for arrivals not yet filed, counted by every scan until empty.
+
+Inserting the contract zone shifts the numbering, so a contractor project has
+`04_working/`, `05_tools/`, `06_temp/`. The rules are R1–R11, in
+[`templates/cowork-contractor/README.md`](templates/cowork-contractor/README.md).
 
 ## Quickstart
 
@@ -140,6 +169,18 @@ python3 04_tools/extract_text.py           # extract new/changed documents
 python3 04_tools/extract_text.py --report  # what is filed, and in what state
 ```
 
+In a `cowork-contractor` project the tools sit in `05_tools/`, and there is one
+more of them:
+
+```bash
+python3 05_tools/log.py add --date 2026-03-04 --dir in --party "ACME" \
+    --type instruction --doc "SI-012" --path 03_exchange/received/ACME/SI-012.pdf \
+    --action open --due 2026-03-18
+python3 05_tools/log.py query --action open   # what is owed, either way
+python3 05_tools/log.py check                 # the log against the tree
+python3 05_tools/log.py render                # rebuild LOG.md from LOG.jsonl
+```
+
 Manifests are content-hashed by default, because a sync client rewrites
 modification times when it hydrates a file or resolves a conflict and an
 mtime-based diff turns to noise. Hashing is sticky — once a manifest carries
@@ -198,6 +239,17 @@ state. **Across v1 → v2 it is not**: the v2 scripts look for `01_basis/` and
 
 Rule changes are a judgement call either way. Update the footer when you
 upgrade, so the version stamp never claims something untrue.
+
+### Tests
+
+The scripts have regression tests in [`tests/`](tests) — standard library only,
+one file per template. Each test instantiates the template into a temporary
+directory with `bin/new_project.py` and drives the real scripts, so what is
+tested is what a project gets:
+
+```bash
+python3 -m unittest discover tests
+```
 
 ## Three constraints worth knowing before you start
 

@@ -13,8 +13,12 @@ What it does:
    `.gitkeep` markers exist only so git tracks empty folders here, and
    `VERSION` only so this script knows what to stamp.
 2. Substitutes the template placeholders in every text file.
-3. Runs `04_tools/update_index.py` in the new folder to write the first
+3. Runs the template's `update_index.py` in the new folder to write the first
    INDEX.md / MANIFEST.json baseline.
+
+Templates number their zones differently — the tools directory is `04_tools/`
+in one and `05_tools/` in another — so it is discovered rather than assumed.
+A template that renumbers its zones needs no change here.
 
 Placeholders substituted: {{PROJECT_NAME}}, {{PROJECT_FOLDER}}, {{CLIENT}},
 {{OWNER}}, {{DATE}}, {{CLIENT_SUFFIX}}, {{TEMPLATE_VERSION}}.
@@ -31,6 +35,7 @@ Put the destination inside a synced cloud drive, and do NOT `git init` in it
 
 import argparse
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -68,6 +73,33 @@ def template_version(template_dir):
     return (read_version(os.path.join(template_dir, "VERSION"))
             or read_version(ROOT_VERSION_FILE)
             or "unknown")
+
+
+def tools_dir(dest):
+    """The template's numbered tools directory, whatever it is numbered.
+
+    Zone numbering differs between templates and will differ again; hardcoding
+    `04_tools` here would break a template silently, after the copy, with a
+    half-written project on disk.
+    """
+    pattern = re.compile(r"^\d\d_tools$")
+    for entry in sorted(os.listdir(dest)):
+        if pattern.match(entry) and os.path.isdir(os.path.join(dest, entry)):
+            return entry
+    return None
+
+
+def frozen_zones(dest):
+    """The numbered zones that hold filed material, for the closing hint.
+
+    Derived rather than listed, because the zones differ per template and a
+    hardcoded list would go stale silently — printing advice about a directory
+    the project does not have.
+    """
+    skip = re.compile(r"^\d\d_(AI_context|working|tools|temp)$")
+    return [d for d in sorted(os.listdir(dest))
+            if re.match(r"^\d\d_", d) and not skip.match(d)
+            and os.path.isdir(os.path.join(dest, d))]
 
 
 def substitute(path, mapping):
@@ -135,20 +167,31 @@ def main():
             if os.path.splitext(fn)[1].lower() in TEXT_EXT:
                 substitute(full, mapping)
 
-    index = os.path.join(dest, "04_tools", "update_index.py")
-    for script in ("update_index.py", "extract_text.py"):
-        path = os.path.join(dest, "04_tools", script)
-        if os.path.exists(path):
-            os.chmod(path, 0o755)
+    tools = tools_dir(dest)
+    if not tools:
+        sys.exit(f"Template '{args.template}' has no NN_tools directory — "
+                 f"cannot generate the first index. Project written to {dest}.")
+    for script in sorted(os.listdir(os.path.join(dest, tools))):
+        if script.endswith(".py"):
+            os.chmod(os.path.join(dest, tools, script), 0o755)
+    index = os.path.join(dest, tools, "update_index.py")
     subprocess.run([sys.executable, index, dest, "--name", name, "--hash"],
                    check=True)
 
+    inbox = os.path.isdir(os.path.join(dest, "_inbox"))
     print(f"\nProject created: {dest}  ({args.template} v{version})")
     print("Next:")
     print("  1. Pin the folder for offline availability in your sync client (R9).")
-    print("  2. File what you already have: reference material into 01_basis/,")
-    print("     anything another party sent you into 02_exchange/received/.")
-    print("  3. Run 04_tools/extract_text.py to build the searchable text layer")
+    if inbox:
+        print("  2. Drop what you already have into _inbox/, then open a session")
+        print("     and ask it to clear the inbox — it files by the rules in")
+        print("     README.md rather than by guesswork.")
+    else:
+        zones = frozen_zones(dest)
+        print(f"  2. File what you already have into the frozen zones "
+              f"({', '.join(z + '/' for z in zones)}) —")
+        print("     README.md says which material belongs in which.")
+    print(f"  3. Run {tools}/extract_text.py to build the searchable text layer")
     print("     (PDFs also need `pip install pypdf`).")
     print("  4. Open a Cowork session on the folder and say: "
           "'read CLAUDE.md and run the session-start scan'.")
