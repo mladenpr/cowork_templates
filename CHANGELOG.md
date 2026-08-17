@@ -23,6 +23,115 @@ Semantic versioning, read for a template rather than a library:
 - **patch** — fixes to the scripts or the documentation, with no change to the
   structure or the rules.
 
+## cowork-consultant 2.0.3 — 2026-08-18
+
+Fixes to the two scripts, prompted by an outside review of the template, and
+the tests that should have caught them. No schema change, no new rule number.
+An existing 2.0.x project takes it by copying `04_tools/*.py` over its own; the
+first run after that redoes every extraction once, and says so.
+
+### Fixed — a failed extraction was "current" forever
+
+`extract_text.py` decided an extraction was up to date by comparing the
+source's size and mtime with what the output recorded. That is the right test
+for "did the document change" and the wrong test for "is this output any
+good": a stub written because `pypdf` was missing matched its source perfectly,
+so the next run reported it as *already current* — and kept doing so after
+`pypdf` was installed. The same held for an output that recorded an extraction
+error, and for output made by an older version of the script.
+
+Freshness now has four reasons, and `--report` names the one that applies:
+**source changed**; **previous attempt failed** (a `not-extracted` or
+`extract-error` result is retried on every run until it succeeds — a missing
+library and a bug are things that get fixed, unlike a scan or a password);
+**extractor updated** (every extraction records the `EXTRACTOR_VERSION` it was
+made with, and a bump redoes it); and **row limit changed** (a sheet that was
+truncated is re-rendered when `--max-rows` differs). The run summary counts
+what it retried and why it redid anything, so a stub is never mistaken for a
+success and an upgrade never looks like a mystery.
+
+### Fixed — spreadsheets lost their row numbers and one of their epochs
+
+The sheet renderer appended only populated rows and used the first as the
+table header. A value from row 100 sat directly under row 1, the blank rows
+that separate one table from the next on a real sheet vanished, and the header
+was whatever happened to be first, which on a real sheet is rarely the header.
+Every row now carries its Excel number in a leading `#` column and the columns
+are headed by their letters, so a cell in the text layer can be named the way
+the sheet names it — the same coordinates the formulas list already used.
+Blank rows are still dropped; the number carries the gap.
+
+Dates were always read in Excel's 1900 system. A workbook saved in the 1904
+system — legacy Excel for Mac, some exporters — puts the same serial 1,462 days
+later, so every date came out four years early and looked entirely plausible.
+`workbookPr/@date1904` is now honoured, and a 1904 workbook says
+`date_system: 1904` in its front matter.
+
+### Fixed — a mixed PDF was not called one
+
+Scan detection averaged text length over the whole document, so a report with
+a typed cover page and forty scanned pages could pass as text. It is now judged
+page by page: `textless_pages: 2-3, 5` in the front matter, and a flag that
+distinguishes `likely-scanned-needs-ocr` (every page) from
+`mixed-text-and-scanned` (some) — which is what the dataset template's "mixed
+(pages n–m)" line was asking for and had no way to fill.
+
+### Added — orphaned extractions are reported
+
+An extraction whose source has gone — moved to `_to_delete/`, renamed, filed
+elsewhere — stayed in `03_working/_extracted/` and went on answering greps
+about a document the project no longer held. Both `--report` and the normal
+run now list them. Per R8 they are reported, not deleted.
+
+### Added — the scan notices a missing directory
+
+`update_index.py` records files, and an empty directory holds none, so a
+schema directory that vanished left no trace in the manifest: removing
+`05_temp/` from a project and running `--diff` said *Clean*. The schema's
+directories are now checked by name; a missing one prints `MISSING DIR`, makes
+`--diff` exit 1, and is a bullet in the session-start scan (`CLAUDE.md`, R7):
+recreate it empty and say so — anything it held shows as MISSING alongside,
+and that is the real event.
+
+### Clarified — two things the LOG did not say
+
+- **Backfill.** R4 says a row is written at the moment of the event, never
+  reconstructed later, and had no answer for a repository started for an
+  engagement already under way — which is most of them. It backfills once, and
+  every backfilled row says so in **Ref** (`backfilled YYYY-MM-DD from …`),
+  with **Date** staying the date of the event. A reconstruction marked as one is
+  a record; an unmarked one is a guess that looks like a fact.
+- **Path for an issued pair.** R5 files the issued PDF and its source together,
+  and the LOG has one **Path** column. That is one event and one row: Path
+  names the PDF, since the PDF is what was sent, and the source sits beside it
+  under the same stem.
+
+### Added — tests
+
+`tests/test_consultant_tools.py`, standard library only, run with
+`python3 -m unittest discover tests` from the repository root. The Office
+fixtures are built in code from the minimal OOXML that Excel writes, so there
+are no binary files in the repository and every fixture states which behaviour
+it exists to pin: both date systems, a sheet with a row gap, a hidden sheet, a
+formula, truncation; each freshness reason; page ranges and the mixed-PDF flag;
+orphans; the missing-directory scan; and an end-to-end instantiation with
+`bin/new_project.py` that runs the real scripts twice with `pypdf` hidden, the
+way the original bug was found. Run against the 2.0.2 scripts, eighteen of the
+nineteen fail.
+
+### Not done, deliberately
+
+The review also proposed transactional `ingest.py`/`issue.py` commands, an
+`_inbox/` arrival zone, a schema validator, and an agent-neutral `AGENTS.md`.
+The steps a script could take over are not the ones that fail — the context md
+and the WORKLOG entry need judgement, and every mechanical step is visible to
+the next scan — and an arrival zone invites files to sit unclassified, which is
+what the frozen/mutable split exists to prevent. The one fragile mechanical
+step, appending to a markdown table, is what `cowork-contractor`'s `log.py`
+already replaces; the consultant template inherits that once it has proved
+itself there, as a minor release, along with a recorded-at timestamp per row.
+`AGENTS.md` is a new template file and waits for the same release.
+
 ## cowork-contractor 0.1.0 — 2026-08-13
 
 A starting point, not yet a template. `templates/cowork-contractor/` is an

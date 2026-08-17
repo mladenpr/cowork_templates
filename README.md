@@ -16,7 +16,7 @@ scan that forces it to notice what changed since last time.
 
 | Template | Version | Use it for |
 |---|---|---|
-| [`cowork-consultant`](templates/cowork-consultant) | 2.0.2 | Consulting engagements — any project that exchanges documents with another party: inputs arrive, work happens, documents are issued. |
+| [`cowork-consultant`](templates/cowork-consultant) | 2.0.3 | Consulting engagements — any project that exchanges documents with another party: inputs arrive, work happens, documents are issued. |
 | [`cowork-contractor`](templates/cowork-contractor) | 0.1.0 | Contracting work. **Not ready** — currently an unmodified copy of `cowork-consultant`, placed so its structure can be developed in the open. Do not start a real project from it yet. |
 
 Templates are versioned independently and each carries its own `VERSION` file;

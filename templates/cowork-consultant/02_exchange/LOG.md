@@ -12,6 +12,12 @@ Rows are written **at the moment of the event**. A log reconstructed afterwards
 from file timestamps is a guess, and it is a guess about exactly the facts
 someone will later dispute.
 
+The one exception is a repository started for an engagement already under way:
+its history has to be backfilled, once. A backfilled row says so — **Ref** ends
+with `backfilled YYYY-MM-DD from <what it was reconstructed from>` — so that a
+reconstruction is never later read as a contemporaneous record. **Date** stays
+the date of the event.
+
 | Date | Dir | Party | Thread | Document | Rev | Ref | Path | Status |
 |---|---|---|---|---|---|---|---|---|
 |  |  |  |  |  |  |  |  |  |
@@ -33,6 +39,10 @@ Columns:
   up into a markdown file rather than filed as it arrived says `email
   (transcript)`, because what the project holds is a copy and the row should
   not imply otherwise.
+- **Path** — repo-relative, to what was filed. An issued document is filed as
+  PDF plus source at the same revision (R5, R10); that is one event and one
+  row, and Path names the PDF, since the PDF is what was sent. The source sits
+  beside it under the same stem.
 - **Status** — `current`, `superseded by Rev n`, `withdrawn`, or for inbound
   items `open` / `answered by …` when a reply is owed.
 

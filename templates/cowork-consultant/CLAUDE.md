@@ -14,6 +14,8 @@ any work in this project:
    - **CHANGED or MISSING in `01_basis/` or `02_exchange/`** → stop and raise
      it with the user. Something frozen moved.
    - **CHANGED in `03_working/`** → expected. Do not raise it.
+   - **`MISSING DIR`** → recreate it, empty, and say so. It held nothing;
+     if it did, those files are listed as MISSING and that is the real event.
    - **`CONFLICT?` or `BAD NAME`** → report and do not touch the file.
 4. Read `02_exchange/LOG.md` — the state of the conversation, and what is
    outstanding.
@@ -133,7 +135,8 @@ so it is yours, in full, in one step.
   it; do not write to a different name to get around the lock.
 - **Python invocation differs by platform**: `python3` on macOS and Linux,
   `py -3` on Windows. PDF extraction needs `pypdf`; Word, Excel and PowerPoint
-  need nothing beyond the standard library.
+  need nothing beyond the standard library. A PDF seen while `pypdf` was
+  missing is retried on every run until it is read — the gap stays visible.
 - **Rights-managed documents cannot be opened** by any tool (R10). Report and
   ask; do not attempt to defeat it.
 

@@ -25,6 +25,10 @@ Behavior:
   they survive; new files get an empty description to be filled in.
 - --diff: prints NEW / CHANGED / MISSING files relative to MANIFEST.json and
   exits 1 if anything differs (0 if clean). Used by the session-start scan.
+- Both modes check that the schema's directories exist. The manifest records
+  files, and an empty directory holds none, so a directory that vanished would
+  otherwise leave no trace; a missing one is reported by name and makes --diff
+  exit 1.
 - Movement inside a frozen zone (01_basis/, 02_exchange/) is reported first and
   separately. A file that changed or vanished there means either a rule was
   broken or the sync client did something, and neither is for a session to
@@ -75,6 +79,19 @@ SKIP_PATHS = {"00_AI_context/INDEX.md", "00_AI_context/MANIFEST.json"}
 # Frozen zones (R1). A file that changes or vanishes in one of these is an
 # alarm; the same event in 03_working/ is a draft being drafted.
 FROZEN_DIRS = ("01_basis/", "02_exchange/")
+
+# The schema (README). Checked by name because the manifest cannot see them:
+# it records files, and an empty directory holds none. Recreating one is safe
+# — it holds nothing — but that it went missing is worth a line, and if it
+# held files those show up as MISSING alongside.
+REQUIRED_DIRS = (
+    "00_AI_context", "00_AI_context/datasets",
+    "01_basis",
+    "02_exchange", "02_exchange/received", "02_exchange/issued",
+    "03_working", "03_working/drafts", "03_working/analysis",
+    "03_working/_extracted",
+    "04_tools", "05_temp", "_to_delete",
+)
 
 
 def frozen(rel):
@@ -250,6 +267,20 @@ def print_warnings(conflicts, names):
               "resolve, not the session's (R8).")
 
 
+def missing_dirs(root):
+    return [d for d in REQUIRED_DIRS
+            if not os.path.isdir(os.path.join(root, d))]
+
+
+def print_missing_dirs(missing):
+    if missing:
+        print("SCHEMA — directories missing (README schema). Recreate them "
+              "empty; if they held files, --diff lists those as MISSING:")
+        for d in missing:
+            print(f"  MISSING DIR  {d}/")
+        print()
+
+
 def diff(root, args):
     manifest = load_manifest(root)
     if manifest is None:
@@ -262,6 +293,8 @@ def diff(root, args):
     added = sorted(set(new) - set(old))
     missing = sorted(set(old) - set(new))
     changed = sorted(p for p in set(old) & set(new) if differs(old[p], new[p]))
+    gone = missing_dirs(root)
+    print_missing_dirs(gone)
 
     # Report frozen-zone movement first and by itself: it means either a rule
     # was broken or the sync client did something, and neither is for a session
@@ -284,16 +317,19 @@ def diff(root, args):
     for p in missing:
         if not frozen(p):
             print(f"MISSING  {p}")
-    if not (added or changed or missing):
+    dirty = bool(added or changed or missing or gone)
+    if not dirty:
         print(f"Clean — {len(new)} files match the manifest "
               f"(baseline {manifest.get('generated', '?')}"
               f"{', hashed' if with_hash else ''}).")
     else:
         print(f"\n{len(added)} new, {len(changed)} changed, {len(missing)} "
               f"missing — {len(frozen_changed) + len(frozen_missing)} in a "
-              f"frozen zone.")
+              f"frozen zone"
+              + (f"; {len(gone)} schema director"
+                 f"{'y' if len(gone) == 1 else 'ies'} missing." if gone else "."))
     print_warnings(*warnings_for(new, args.device))
-    return 0 if not (added or changed or missing) else 1
+    return 1 if dirty else 0
 
 
 def load_descriptions(root):
@@ -361,6 +397,7 @@ def regenerate(root, name, args):
         f.write("\n".join(lines))
     print(f"INDEX.md and MANIFEST.json regenerated — {len(files)} files"
           f"{' (hashed)' if with_hash else ''}.")
+    print_missing_dirs(missing_dirs(root))
     print_warnings(*warnings_for({f["path"] for f in files}, args.device))
     return 0
 

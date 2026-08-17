@@ -134,7 +134,11 @@ or out, in date order, with its direction, party and thread. It is the index of
 the conversation, the way `INDEX.md` is the index of the files, and it is what
 makes "what did we send them on the 24th" and "what have they still not
 answered" one-glance questions. A row is written at the moment of the event,
-never reconstructed later.
+never reconstructed later — with one exception: a repository that starts
+mid-engagement backfills its history once, and every backfilled row says so in
+Ref, with the date it was written and what it was reconstructed from. A
+reconstruction marked as one is a record; an unmarked one is a guess that looks
+like a fact.
 
 **R5 — Issuing is an explicit step, never a rename.** A document leaves the
 project only by being issued, and issuing is something you ask for by name. On
@@ -170,6 +174,8 @@ severity of a result depends on where it is:
   Something frozen moved: either a rule was broken or the sync client did
   something. Not for a session to resolve.
 - **CHANGED in `03_working/`** → normal. That is a draft being drafted.
+- **MISSING DIR** → a directory of the schema is gone. Recreate it, empty, and
+  say so; anything it held is listed as MISSING and is the real event.
 
 **R8 — Never delete; stage instead.** Cleanup means moving files into
 `_to_delete/` under non-colliding names and reporting what was moved. The user

@@ -33,7 +33,8 @@
 > What decides whether the file can be used at all, and is expensive to
 > rediscover every session (R10). Delete the lines that do not apply.
 
-- **Text layer:** searchable / scanned image — needs OCR / mixed (pages n–m)
+- **Text layer:** searchable / scanned image — needs OCR / mixed (pages n–m
+  have none — the extraction's front matter lists them as `textless_pages`)
 - **Tracked changes:** none / present — n insertions, n deletions, by whom
 - **Comments:** none / n comments, by whom
 - **Protection:** none / rights-managed (Confidential label) / password — and
