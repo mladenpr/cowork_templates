@@ -316,6 +316,114 @@ expensive to rediscover and cheap to write down once:
   common reason a document cannot be processed, and it produces baffling errors
   when it is not named.
 
+## The authoring variant — R11 and R12, and what changes in R2, R6 and R7
+
+`cowork-author` exists because the consultant pattern is silent on the middle
+of a document's life. Its rules are the consultant's, with three changed and
+two added, and each addition has a failure behind it.
+
+### R2 — a document md, not just dataset mds
+
+**Failure it prevents:** every session re-deriving what the document is
+supposed to be, and re-deriving it differently.
+
+A dataset md describes something that arrived. Nothing in the consultant
+pattern describes the thing being *made*: what it is for, whose form it
+borrows, which requirements it must answer and where, how far each section has
+got, what you have said you want, what feedback is still open, which passages
+are yours and must not be touched. Without that file, a session reads the
+draft and the WORKLOG and forms an opinion — a different opinion from last
+week's — and the document drifts in tone and structure from session to
+session. The document md is read before the draft is opened, and two of its
+tables are read by their gaps: a coverage row still `open` before issue is a
+finding, and a feedback item still `open` is a thing you said that has not been
+done.
+
+### R6 — the draft on disk is the truth
+
+**Failure it prevents:** the agent overwriting your hand edits with its own
+memory of the document.
+
+The user editing the draft by hand is not an exception in this workflow; it is
+step five of six. Two things go wrong when a session does not expect it. The
+first is that the session regenerates the draft — from what it remembers, from
+the document md, from a markdown master it kept for its own convenience — and
+your edits are gone. The second is that it reads a stale copy: an extraction of
+the draft made last session, which is why the live draft is never mirrored into
+the text layer. Both are prevented by the same sentence: read the draft before
+you write it, and never keep a second copy of its text that could be mistaken
+for it.
+
+The markdown-master temptation deserves naming, because it is the reasonable
+engineering choice — easier to revise, easier to diff — and it is wrong here
+for one reason: it lasts until your first hand edit of the `.docx`, and from
+then on there are two truths and the agent will trust the wrong one.
+
+### R7 — `DRAFT EDITED` as its own category
+
+**Failure it prevents:** the one `CHANGED` that matters being skimmed past
+with the ones that do not.
+
+The consultant scan reports a change in the working zone as routine, which is
+right there: a draft being drafted. In the authoring loop a change to the live
+draft *at session start* cannot be routine, because the session reindexes
+after every operation — so a change visible at the start happened since the
+last index, which means outside a session, which means you. The scan says so in
+its own section, and the session's first act is `draft_diff.py`: what did you
+change, by section, so that it can record it, mark those passages
+`user-edited`, and work around them.
+
+### R11 — revisions are frozen by an explicit step, and are the record
+
+**Failure it prevents:** a document with fifteen revisions and no history.
+
+The consultant's R6 says the draft's history is the sync client's version
+history. For a bill of quantities that is adequate. For a document that goes
+round fifteen times it is not: sync history gives you bytes with timestamps —
+no "what changed and why", no "what did the reviewer see", no "which revision
+did we send Jane and has she come back". The record needs a frozen snapshot
+per revision, a log row saying what it was for and what changed, and a place
+for what came back on it.
+
+The rule has the same shape as R5 because it solves the same problem one
+level in. **The judgement is yours** — when a state of the draft is worth
+keeping is not a decision to automate, and a session that froze a revision
+every time it finished editing would rebuild the `report_v2_final_reviewed`
+sprawl that R6 exists to prevent. **The bookkeeping is not yours**: copy,
+rename, log row, WORKLOG entry, status updates, reindex. What the session
+*does* do on its own initiative is offer: before you edit by hand (so the diff
+afterwards is clean), before anyone else sees the draft (so a return has a
+revision to be on), before issue.
+
+Returns go in `Rnn/returns/` and not in `02_exchange/received/`, even though a
+colleague's marked-up copy is "theirs" in every sense the consultant's R1 uses,
+because "they" are inside the building. `02_exchange/issued/` means "this left
+the building" and is trusted because it has no exceptions; putting internal
+review traffic through the exchange would make "did we send this to the
+client?" a judgement again.
+
+### R12 — form is borrowed, content is not
+
+**Failure it prevents:** another client's confidential content appearing in
+this client's document.
+
+An example and a template are the two inputs that make the authoring loop
+work and the two that carry a hazard no other input does. A sample from a
+past project used as the shell still has the past project in it — a client
+name in the footer, a figure in a table, a paragraph of scope that was never
+rewritten. An example proposal is imitated for its structure and tone, and a
+model that is good at imitation will, without a rule, imitate a sentence. The
+failure is invisible in review because the offending text is fluent and
+plausible; it is found by the recipient, or by the other client.
+
+The rule makes the boundary mechanical. The shell is copied, never edited; a
+sample is stripped to its skeleton at instantiation and the document md
+records what was kept. An example's context md lists its **terms to check
+for** — names, figures, references — and the draft is grepped for them before
+a revision leaves your hands and always before issue. With the examples in the
+text layer that is one command, and it is the difference between catching the
+leak and recalling it.
+
 ## What the pattern does not do
 
 It does not version project instances. Sync-client history is coarse and

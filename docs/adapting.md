@@ -83,6 +83,38 @@ Consultant packages arrive in revisions constantly; the member table inside a
 single thread md is what keeps "which structural set is current" answerable
 without opening a drawing.
 
+## Writing the document itself — `cowork-author`
+
+The five cases above are read against `cowork-consultant`, whose zones are
+about the exchange. When the project *is* the document — the proposal, the
+method statement, the report, the response to a comments sheet — the middle of
+the work is the draft going round between you and the agent across sessions,
+and that is what `cowork-author` adds zones for. The same reading, by
+document type:
+
+| Document | `01_basis/reference/` | `01_basis/examples/` and `templates/` | `02_exchange/` | What the document md's coverage table is seeded from |
+|---|---|---|---|---|
+| **Proposal / RFQ response** | Rate library, CVs, standard methodology, past-project data you will cite | A past proposal that won; the company proposal shell | RFQ and addenda in; the submission and clarifications out | Every question and evaluation criterion in the RFQ |
+| **Method statement / plan** | Specification, drawings, standards, risk assessments | A method statement the reviewer liked; the company MS shell | The instruction to produce it in; the MS out; the reviewer's comments sheet back in | Scope items and specification clauses it must address |
+| **Report / study** | Data, calculations, papers, standards | A comparable report; the report shell | Often thin — the brief in, the report out, peer comments back | The brief's questions; the terms of reference |
+| **Response to comments** | The document being commented on, at the revision commented | The previous response, for its format | The comments sheet in (it is your document returned marked up); the response and the revised document out | Every comment, one row each — the table *is* the response skeleton |
+
+Two things are the same whatever the document type, and both are why the
+template exists. First, every instruction you give about the document — in
+session, by commenting in Word, by marking up a print — lands in the feedback
+register the moment it is given, with a source, and the register is read by its
+gaps. Second, a revision is frozen when you say so and never otherwise: the
+session offers one before you edit by hand, before a reviewer sees the draft,
+and before issue, and `draft_diff.py` tells you what changed against the last
+one. The live draft is a single `.docx` in `04_working/drafts/<slug>/` and it
+is the truth; nothing else about the document's text is authoritative until it
+is frozen.
+
+The temptation worth resisting is a markdown master beside the `.docx`, for
+the agent's convenience. It lasts until the first time you edit the `.docx` by
+hand, and then the project has two truths and the agent will trust the wrong
+one.
+
 ## Adjustments worth making, and ones that are not
 
 **Worth making**
@@ -94,6 +126,10 @@ without opening a drawing.
 - Sub-foldering `01_basis/` by source or subject on the same terms.
 - Extending `PROJECT.md` with a section for the specific thing that keeps going
   wrong on your project type.
+- In `cowork-author`, a `returns/` folder under a revision stays empty on a
+  project where nobody but you and the agent ever sees the draft. That is
+  fine; it costs nothing, and the first time a colleague sends comments back
+  on R04 there is a place for them that says which revision they are on.
 
 **Not worth making**
 

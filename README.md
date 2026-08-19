@@ -3,7 +3,7 @@
 Reusable project-repository templates for working with an AI agent (Claude
 Cowork, Claude Code, or any agent that can read a folder) on real,
 document-heavy projects — tenders, claims, studies, due diligence, litigation,
-research.
+research, and the long-form documents all of those produce.
 
 The problem these solve: an AI session starts with no memory. Left to itself it
 re-reads whatever it stumbles across, mixes what a client actually sent with
@@ -18,6 +18,7 @@ scan that forces it to notice what changed since last time.
 |---|---|---|
 | [`cowork-consultant`](templates/cowork-consultant) | 2.1.0 | Consulting engagements — any project that exchanges documents with another party: inputs arrive, work happens, documents are issued. |
 | [`cowork-contractor`](templates/cowork-contractor) | 0.4.0 | Work performed under a contract, from award onwards — either tier, main or sub. Adds a contract zone, party sub-folders, a queryable exchange log and registers. Below 1.0 until it has been run on a live project. |
+| [`cowork-author`](templates/cowork-author) | 0.1.0 | Writing a document — a proposal, a method statement, a report, a response — through many internal revisions across many sessions, from a brief, reference material, an example and a branded template, to submission. Role-neutral: the loop is the same for a consultant and a contractor. Adds a frozen revision zone with its own log, a context file per deliverable, basis sub-folders by role, and a draft diff. Below 1.0 until it has been run on a live document. |
 
 Templates are versioned independently and each carries its own `VERSION` file;
 see [Versioning](#versioning). Pick one with `--template`.
@@ -109,6 +110,48 @@ Inserting the contract zone shifts the numbering, so a contractor project has
 `04_working/`, `05_tools/`, `06_temp/`. The rules are R1–R11, in
 [`templates/cowork-contractor/README.md`](templates/cowork-contractor/README.md).
 
+### What `cowork-author` changes
+
+The consultant template covers the two ends of a document's life — the inputs
+arriving, the document leaving — and says nothing about the middle, where most
+of the work is: the draft going round and round between you and the agent,
+across sessions, with your own hand edits in between. `cowork-author` keeps
+the four ideas and the first two zones unchanged and adds what that middle
+needs:
+
+- **`03_revisions/`** — a third frozen zone for the document's own history.
+  A revision is frozen only by an explicit step, the internal mirror of issuing
+  (R11): you ask for it by name, the session offers it at the moments that
+  warrant it — before you edit by hand, before anyone else sees the draft,
+  before issue — and never does it unasked. `03_revisions/<slug>/Rnn/` holds
+  the draft as frozen and, in `returns/`, whatever came back on it; a revision
+  log records every freeze, return and issue in one chronology, with the "what
+  changed" column that sync history cannot give you. It is kept out of
+  `02_exchange/` so that "left the building" stays a lookup with no exceptions.
+- **A document md per deliverable** (`00_AI_context/documents/<slug>.md`) —
+  the authoring counterpart of a dataset md: what the document is for, what
+  form it borrows, a requirements-coverage table, an outline with a status per
+  section (including `locked` and `user-edited`), the decisions in force, a
+  feedback register, and where its revisions stand. Read before the draft is
+  opened, every session; two of its tables are read by their gaps.
+- **`01_basis/` by role** — `reference/` (to be correct against), `examples/`
+  (form, never content) and `templates/` (the branded shell the draft is copied
+  from). Each is used in a different way and carries a different hazard, so the
+  role is a folder rather than a judgement. **Form is borrowed, content is not**
+  (R12): a sample used as a shell is stripped at instantiation, an example's
+  context md lists the terms to check for, and the draft is grepped for them
+  before a revision leaves your hands.
+- **The draft on disk is the truth** (R6) — one live `.docx` per deliverable,
+  no markdown master beside it, read before it is written. The scan reports a
+  change to it at session start as its own category, `DRAFT EDITED`, because
+  that can only mean the user's hands were on it; `05_tools/draft_diff.py`
+  then says what changed, by section, with reworded paragraphs marked word by
+  word.
+
+The numbering lands where the contractor's does — `04_working/`, `05_tools/`,
+`06_temp/`. The rules are R1–R12, in
+[`templates/cowork-author/README.md`](templates/cowork-author/README.md).
+
 ## Quickstart
 
 ### Once — clone the toolbox, somewhere that is not a project
@@ -172,8 +215,18 @@ python3 04_tools/extract_text.py           # extract new/changed documents
 python3 04_tools/extract_text.py --report  # what is filed, and in what state
 ```
 
-In a `cowork-contractor` project the tools sit in `05_tools/`, and there is one
-more of them:
+In a `cowork-author` project the tools sit in `05_tools/` and there is one more,
+read-only, for the live draft:
+
+```bash
+python3 05_tools/draft_diff.py method-statement                  # live draft vs latest frozen revision
+python3 05_tools/draft_diff.py method-statement --against R03    # vs a named revision
+python3 05_tools/draft_diff.py method-statement --between R02 R04
+python3 05_tools/draft_diff.py method-statement --summary        # sections only
+```
+
+In a `cowork-contractor` project the tools also sit in `05_tools/`, and the one
+more of them is the log:
 
 ```bash
 python3 05_tools/log.py add --date 2026-03-04 --dir in --party "ACME" \

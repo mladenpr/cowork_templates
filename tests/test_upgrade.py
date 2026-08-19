@@ -117,6 +117,25 @@ class Stamp(unittest.TestCase):
              "00_AI_context/datasets/_TEMPLATE.md",
              "00_AI_context/registers/_TEMPLATE.md"})
 
+    def test_author_stamp_covers_its_own_scaffolding(self):
+        proj = os.path.join(self.tmp, "author")
+        code, out = run(NEW_PROJECT, proj, "--name", "Report",
+                        "--template", "cowork-author")
+        self.assertEqual(code, 0, out)
+        with open(os.path.join(proj, "00_AI_context", "TEMPLATE.json"),
+                  encoding="utf-8") as f:
+            stamp = json.load(f)
+        self.assertEqual(stamp["template"], "cowork-author")
+        self.assertEqual(
+            set(stamp["scaffolding"]),
+            {"CLAUDE.md", "README.md", "05_tools/draft_diff.py",
+             "05_tools/extract_text.py", "05_tools/update_index.py",
+             "00_AI_context/datasets/_TEMPLATE.md",
+             "00_AI_context/documents/_TEMPLATE.md"})
+        self.assertEqual(load("upgrade_project").scaffolding_files(
+            os.path.join(ROOT, "templates", "cowork-author")),
+            set(stamp["scaffolding"]))
+
 
 class Upgrade(unittest.TestCase):
     """upgrade_project.py against a simulated newer template release."""

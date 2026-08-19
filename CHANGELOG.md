@@ -23,6 +23,155 @@ Semantic versioning, read for a template rather than a library:
 - **patch** — fixes to the scripts or the documentation, with no change to the
   structure or the rules.
 
+## cowork-author 0.1.0 — 2026-08-19
+
+A third template, for the projects where the document *is* the project. The
+consultant template covers the two ends of a document's life — the inputs
+arriving, the document leaving — and is silent on the middle, where most of
+the work is: the draft going round between the user and the agent across
+sessions, from a brief, reference material, an example and a branded shell,
+with the user's own hand edits in between, to submission. The loop is the same
+whether the user is a consultant or a contractor; only the document type
+differs. Derived from `cowork-consultant` 2.1.0 the way `cowork-contractor`
+was, keeping the four ideas and the first two zones unchanged. Below 1.0.0
+until it has run on a live document. The design it implements is
+`docs/design-cowork-author.md`.
+
+### Added — `03_revisions/`, a third frozen zone, and R11
+
+The document's own history. A revision is frozen only by an explicit step —
+the internal mirror of issuing: the user asks for it by name, the session
+**offers** it at the moments that warrant it (before the user edits by hand,
+before anyone else sees the draft, at a milestone, before issue) and never
+performs it unasked. `03_revisions/<slug>/Rnn/` holds the draft as frozen,
+source always and PDF when the revision leaves the user's hands, and in
+`returns/` whatever came back on it — a colleague's marked-up copy, an
+annotated print — filed as a received document would be. `03_revisions/LOG.md`
+records every `frozen`, `return`, `issued` and `restored` event in one
+chronology, with the "what changed" column that sync history cannot supply;
+the `issued` row is where the internal `Rnn` and the external label ("Rev A")
+are written against each other, once. Kept out of `02_exchange/` so that "left
+the building" remains a lookup with no exceptions. `R01, R02, …` is the
+project's own sequence, never the recipient's.
+
+### Added — a document md per deliverable (R2 extended)
+
+`00_AI_context/documents/<slug>.md`, the authoring counterpart of a dataset
+md: identity and brief, form (which shell, which examples, what was stripped),
+a requirements-coverage table seeded from the request, an outline with a
+status per section — `planned · drafted · revised · user-edited · locked` —
+the decisions in force, a feedback register with `F-ids`, and where the
+revisions stand. Read before the draft is opened, every session. Two of its
+tables are read by their gaps. `documents/_TEMPLATE.md` is scaffolding.
+
+One slug ties a deliverable together across `00_AI_context/documents/`,
+`04_working/drafts/` and `03_revisions/`; the level exists from day one.
+
+### Added — `01_basis/` by role, and R12
+
+`reference/` (to be correct against), `examples/` (form, never content),
+`templates/` (the branded shell the draft is instantiated from). Each is used
+differently and carries a different hazard, so the role is a folder rather
+than a judgement; the scan treats all three as schema. **R12 — form is
+borrowed, content is not:** the shell is copied, never edited; a sample from
+another project is stripped to its skeleton at instantiation and the document
+md records what was kept; an example's context md lists the **terms to check
+for**, and the draft is grepped for them before a revision leaves the user's
+hands and always before issue. The failure is another client's content in
+this client's document — fluent, plausible, found by the recipient.
+
+The consultant's zone rule is unchanged and stated for this case: the RFQ
+being answered is `received/`, not reference; the client's comments sheet is
+`received/` — the user's own document returned marked up.
+
+### Changed — R6, the draft on disk is the truth; R7, `DRAFT EDITED`
+
+The user editing the draft by hand is step five of the loop, not an exception.
+R6 now says: one live `.docx` per deliverable in `04_working/drafts/<slug>/`,
+read before it is written, never regenerated from memory or from the document
+md, **no markdown master beside it** — the moment the `.docx` is edited by
+hand a twin is stale and the project has two truths. The draft's history is
+`03_revisions/`, its reasoning the WORKLOG, sync history the safety net.
+Passages the outline marks `locked` or `user-edited` are not rewritten without
+an instruction that names them.
+
+`update_index.py --diff` reports a change under `04_working/drafts/` in its
+own section — `DRAFT EDITED since last index` — between the frozen-zone alarm
+and the routine list, because the session reindexes after every operation, so
+a change visible at session start happened outside a session. Not a stop, not
+routine: read it, diff it, record it, then edit. `CHANGED` elsewhere in
+working stays routine; the two `LOG.md` files are exempt from the frozen alarm
+when they change (appending is the ordinary case) and not when they go
+missing, as in the contractor; `06_temp/` is not scanned, as in the
+contractor.
+
+### Changed — R3 and R5, and R10
+
+R3 keeps the paste rule — a fact about the world quoted in chat has no
+provenance — and states the clarification the authoring loop needs: **the
+user's instructions about the document are decisions, and the user is their
+source.** They go into the feedback register the moment they are given, dated
+and attributed, and into the WORKLOG where they change the approach.
+
+R5 issues **from a frozen revision** — issuing freezes first if the live
+draft is ahead — and **copies** the frozen files into `02_exchange/issued/`
+under the external convention; the live draft stays, as the base of the next
+revision. The consultant moves the draft out and copies it back; here the
+frozen revision already is the record of what was sent, so the move is
+ceremony. The contamination check of R12 runs before any issue.
+
+R10 adds: edit the live draft in place, as a package — the shell's styles,
+headers, footers, numbering and fields preserved; never round-tripped through
+a converter; never rebuilt unless asked. Comments found in the live draft are
+feedback: registered first, acted on, and only then removable — the live
+draft is mutable, so that is allowed where it never is in a frozen zone.
+
+### Added — `05_tools/draft_diff.py`
+
+Read-only. Compares the live draft with a frozen revision (the latest, or
+`--against Rnn`), or two frozen revisions (`--between`), by section: only
+sections that differ are printed, as added, removed or changed, and a
+paragraph that was reworded rather than replaced is shown once with the
+removed words marked `[-so-]` and the added `{+so+}`. The extractor's own
+sections (header/footer, comments, footnotes, sheets) stay top-level rather
+than nesting under the last document heading. Reads both sides through the
+readers `extract_text.py` already has — `extract_file()` is new there for the
+purpose — so the two compare like with like, and says when the live draft
+carries comments or tracked changes, which are feedback. Several files in a
+draft folder are paired strictly: same stem (ignoring `_Rnn`) and extension,
+or the one case the freeze step creates — the main document renamed
+`<slug>_Rnn` — and otherwise `--file` / `--rev-file`, because a diff of the
+wrong pair reads exactly like a diff of the right one. Exit 0 identical,
+1 differs, 2 usage.
+
+It ships in 0.1.0 because it encodes no workflow guesses; the freeze step
+itself is a documented procedure, not a script, on the same principle the
+consultant applied to issue and ingest. A `revision.py` — freeze, return and
+issue rows into a JSONL log with a rendered view, on the contractor's `log.py`
+model — follows once the workflow has run on a real document; the freeze is
+frequent enough that it will earn it quickly.
+
+### Not done, deliberately
+
+A markdown master for the draft (see R6). Automatic freezes at session end
+(revision sprawl by another name — R6 exists to prevent it). A per-session
+text baseline of the live draft for diffing (the frozen revision is the
+honest baseline, and the session offers to freeze before the user edits by
+hand, which is when it matters). A PDF at every freeze (a render step every
+time; the PDF is required when the revision leaves the user's hands).
+
+### Repository
+
+- `README.md` gains the template's row and a "What `cowork-author` changes"
+  section; `docs/adapting.md` a reading by document type; `docs/pattern.md`
+  the failure modes behind the document md, R6, R7, R11 and R12.
+- `tests/test_author_tools.py` — instantiation, the scan's draft section and
+  log exemption, the extractor across three zones and `extract_file()`, and
+  `draft_diff.py` end to end including the pairing rules. `test_upgrade.py`
+  pins the author scaffolding set: `CLAUDE.md`, `README.md`, the three
+  scripts, the two `_TEMPLATE.md` stubs. `bin/new_project.py` and
+  `bin/upgrade_project.py` needed no change — they discover zones by pattern.
+
 ## cowork-consultant 2.1.0 — 2026-08-19
 
 Projects can now be upgraded. The README has always said what an upgrade means
