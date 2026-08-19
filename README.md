@@ -18,7 +18,7 @@ scan that forces it to notice what changed since last time.
 |---|---|---|
 | [`cowork-consultant`](templates/cowork-consultant) | 2.1.0 | Consulting engagements — any project that exchanges documents with another party: inputs arrive, work happens, documents are issued. |
 | [`cowork-contractor`](templates/cowork-contractor) | 0.4.0 | Work performed under a contract, from award onwards — either tier, main or sub. Adds a contract zone, party sub-folders, a queryable exchange log and registers. Below 1.0 until it has been run on a live project. |
-| [`cowork-author`](templates/cowork-author) | 0.1.0 | Writing a document — a proposal, a method statement, a report, a response — through many internal revisions across many sessions, from a brief, reference material, an example and a branded template, to submission. Role-neutral: the loop is the same for a consultant and a contractor. Adds a frozen revision zone with its own log, a context file per deliverable, basis sub-folders by role, and a draft diff. Below 1.0 until it has been run on a live document. |
+| [`cowork-author`](templates/cowork-author) | 0.2.0 | Writing a project's documents from the ground up — method statements, plans, reports, technical proposals — through many internal revisions across many sessions, from a brief, reference material, an example and a branded template, to submission. One repository per real project, all of its documents in it. Role-neutral: the loop is the same for a consultant and a contractor. A priced quotation, or a revision of a document already issued, is ordinarily a consultant job. Adds a frozen revision zone with its own log, a context file per deliverable, basis sub-folders by role, a drop zone, a draft diff, and an index that rolls media folders up. Below 1.0 until it has been run on a live project. |
 
 Templates are versioned independently and each carries its own `VERSION` file;
 see [Versioning](#versioning). Pick one with `--template`.
@@ -147,6 +147,17 @@ needs:
   that can only mean the user's hands were on it; `05_tools/draft_diff.py`
   then says what changed, by section, with reworded paragraphs marked word by
   word.
+- **Built for one project, many documents, and years of drops.** `_inbox/` is
+  where photos, drawings and spec sections land, counted by every scan until
+  filed. Sub-folders are made **on demand and by subject, never by document**
+  — `reference/` starts flat and grows `photos/…/`, `drawings/`, `spec/` as
+  sets arrive, because a tree of empty folders predicting subjects nobody has
+  dropped yet is clutter too. A set of media is one dataset with one md.
+  `04_working/library/` holds project text written once and reused across
+  documents. And the index **rolls media folders up**: ten or more photos,
+  drawings or archives in one folder are one INDEX line with a count by
+  extension, and one `--diff` line, while the manifest still records every
+  file.
 
 The numbering lands where the contractor's does — `04_working/`, `05_tools/`,
 `06_temp/`. The rules are R1–R12, in

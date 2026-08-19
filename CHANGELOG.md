@@ -23,6 +23,89 @@ Semantic versioning, read for a template rather than a library:
 - **patch** — fixes to the scripts or the documentation, with no change to the
   structure or the rules.
 
+## cowork-author 0.2.0 — 2026-08-19
+
+One project, many documents. 0.1.0 was designed around a document; the
+template is for a real project's documents — method statements, plans,
+reports, technical proposals, developed from the ground up — in **one
+repository per project, created once**, with years of photos, drawings and
+spec sections dropped into it and ten-plus deliverables under their own slugs.
+The slug level already existed everywhere it mattered; what was missing was a
+drop zone, a stated way to sub-folder reference material, a home for text
+reused across documents, and tooling that stays readable at hundreds of media
+files. A pre-1.0 minor: it changes the schema (`_inbox/`), and no author
+project has yet run on a live document, so it strands nobody.
+
+Also stated, up front: the template is for the heavy lifting. A priced
+quotation, or the revision of a document that has already been issued, is
+ordinarily a `cowork-consultant` job.
+
+### Added — `_inbox/`
+
+The contractor's drop zone, for the same reason: things arrive in batches and
+should land in one place. Counted by every scan until empty — `n file(s) in
+_inbox/ awaiting filing` — and schema, so a missing inbox is reported. Not a
+zone: nothing in it is quoted, extracted or relied on. It rolls up like
+anywhere else — sixty photos dropped there are one line saying sixty photos
+are waiting; the first cut of this release listed every one and produced
+exactly the noise the template exists to prevent.
+
+### Changed — sub-folders on demand, by subject, never by document
+
+`01_basis/reference/` starts flat. When a set arrives or a subject accumulates
+the session creates a folder named for the subject (`drawings/`, `spec/`,
+`photos/2026-08-12_north-quay/`) and files into it. **No subject folders are
+predefined** — the user's ruling, and the right one: a tree of empty folders
+predicting subjects nobody has dropped yet is exactly the clutter the template
+exists to avoid. Never a folder per deliverable: a drawing serves three method
+statements and exists once; which documents use it lives in the mds. The same
+on-demand, by-slug rule is stated for `issued/`, `received/` and
+`04_working/analysis/`. R2 gains: **a set of media is one dataset** with one
+md — what the set shows, which documents draw on it — never one per photo.
+
+### Changed — R1, what the exchange is on a real project
+
+`02_exchange/` is the conversation *about the documents being written* —
+requests, comments sheets, approvals, submissions. Drawings, specifications,
+photos and standards are `reference/` **whoever sent them**: a session filing
+every client drawing under `received/` would swell the exchange log with rows
+that answer nothing the log exists to answer. If the same real project also
+has a contractor repository, the author repository holds reference copies and
+the dataset md says where the original lives (new **Origin** line in
+`datasets/_TEMPLATE.md`).
+
+### Added — `04_working/library/` (on demand), and drafts hygiene (R6)
+
+Project text reused across documents — the project description, the site, the
+parties, standard method paragraphs — is written once, one file per block,
+taken as a copy into each draft, updated only on instruction. Copying from the
+last document is how ten method statements drift apart. Not a twin of any
+draft; R6 holds. R6 also now says the draft folder holds the document and its
+true companions only — photos and figures are embedded from basis or analysis,
+never left loose, because every freeze copies the folder.
+
+### Added — media roll-up in the scan, the index and the extractor's report
+
+`update_index.py`: a folder holding `ROLLUP_MIN` (10) or more media files —
+images, CAD/BIM, archives, video, audio; never Office documents or PDFs, each
+of which a session opens and cites — becomes **one line** in `INDEX.md`
+(`- \`photos/walk-01/\` — 142 media files (.jpg ×142) — <description>`) and
+one line in each `--diff` section, with the count by extension. The manifest
+still records every file, so the scan loses nothing; only the reading is
+shortened. A description written on the folder line survives regeneration,
+and the generated count is not read back as the description. Non-media files
+in the same folder stay listed one by one. `extract_text.py --report` rolls
+opaque files up the same way (`photos/  12 not extractable (image ×11, CAD
+drawing ×1)`). The inbox rolls up in the scan like any other folder.
+
+### Tests
+
+`tests/test_author_tools.py` gains: the inbox counted until empty and schema;
+roll-up in `--diff`, `INDEX.md` and the manifest, the folder description
+surviving and not self-appending, the sub-threshold folder listed per file,
+the inbox rolled up and counted, a depleted frozen media folder still alarming
+per file; the report roll-up. 77 tests pass.
+
 ## cowork-author 0.1.0 — 2026-08-19
 
 A third template, for the projects where the document *is* the project. The

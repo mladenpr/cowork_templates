@@ -2,10 +2,12 @@
 
 > Template for context files (rule R2). One file per **logical dataset**: a
 > singular document gets its own; a series or a negotiation thread gets one
-> covering the whole thing, with the member table below. An example and a
-> template each get one, with the *Use as example or template* section filled
-> in — that section is what R12 is enforced from. Copy this, fill it in,
-> delete the guidance notes.
+> covering the whole thing, with the member table below; **a set of media —
+> the photos from one walk, the drawings of one issue — gets one** that says
+> what the set shows and which documents draw on it, never one per file. An
+> example and a template each get one, with the *Use as example or template*
+> section filled in — that section is what R12 is enforced from. Copy this,
+> fill it in, delete the guidance notes.
 >
 > The thing being *written* is not a dataset and does not get one of these; it
 > gets a document md in `00_AI_context/documents/` (R2).
@@ -13,10 +15,13 @@
 ## Identity
 
 - **Zone:** `01_basis/` (reference / example / template) or `02_exchange/`
-  (conversation)
+  (the conversation about the documents)
 - **Role (basis only):** `reference` — to be correct against | `example` — to
   imitate in form | `template` — the shell the draft is copied from
-- **Path(s):**
+- **Path(s):** the file, or the folder for a set (`01_basis/reference/photos/…/`)
+- **Origin:** who produced it and, if a copy, where the original lives (the
+  contractor repository, the client's document control) — reference material
+  is reference whoever sent it (R1)
 - **Party:** who it came from or goes to — omit for basis material
 - **Thread:** the LOG thread name, if this is a negotiation or a series
 - **First received / first issued:** date, and by what channel

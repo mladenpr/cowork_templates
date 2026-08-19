@@ -10,12 +10,23 @@ record and cannot be revised. Everything still being worked on is mutable and
 authoritative for nothing. The directory layout is that distinction made
 visible.
 
-This is the **authoring** variant of the pattern. The project's centre is a
-document being produced — a proposal, a method statement, a report, a response
-— through many revisions across many sessions, from a brief, reference
-material, an example of what good looks like and a branded template, and
-finishing with a submission. The role you hold while writing it, consultant or
-contractor, does not change the loop; only the document type does.
+This is the **authoring** variant of the pattern. The project's centre is
+documents being produced from the ground up — method statements, plans,
+reports, technical proposals — through many revisions across many sessions,
+from a brief, reference material, an example of what good looks like and a
+branded template, and finishing with a submission. The role you hold while
+writing, consultant or contractor, does not change the loop; only the document
+type does. It is for the heavy lifting: a priced quotation, or the revision of
+a document that has already been issued, is ordinarily a `cowork-consultant`
+job.
+
+**One repository per real project, all of its documents in it.** The folder is
+created once; every document the project needs is written here, each under its
+own slug. The structure is designed so that after ten documents and a few
+hundred dropped-in photos and drawings it is still legible: a drop zone the
+scan counts until it is empty, sub-folders created on demand and by subject
+rather than predefined, and an index that rolls media-heavy folders up into
+one line.
 
 ## Schema
 
@@ -31,10 +42,10 @@ contractor, does not change the loop; only the document type does.
 │   ├── WORKLOG.md         ← dated decisions and open items
 │   ├── datasets/          ← one context md per input dataset
 │   └── documents/         ← one context md per DELIVERABLE: spec, outline, feedback
-├── 01_basis/              ← FROZEN — what the document rests on, by role
-│   ├── reference/         ← what it must be correct against
+├── 01_basis/              ← FROZEN — what the documents rest on, by role
+│   ├── reference/         ← what they must be correct against (sub-folders by subject, on demand)
 │   ├── examples/          ← what good looks like — form, never content
-│   └── templates/         ← the branded shell the draft is instantiated from
+│   └── templates/         ← the branded shells drafts are instantiated from
 ├── 02_exchange/           ← FROZEN — the conversation with the other parties
 │   ├── received/          ← what came in
 │   ├── issued/            ← what went out
@@ -47,12 +58,19 @@ contractor, does not change the loop; only the document type does.
 ├── 04_working/            ← MUTABLE — nothing here is authoritative
 │   ├── drafts/
 │   │   └── <doc-slug>/    ← ONE live draft per deliverable, revised in place
-│   ├── analysis/          ← calculations, figures, tables feeding the draft
+│   ├── analysis/          ← calculations, figures, tables feeding the drafts (by slug, on demand)
+│   ├── library/           ← project text reused across documents, written once (on demand)
 │   └── _extracted/        ← searchable text layer of the frozen zones (regenerated)
 ├── 05_tools/              ← kept scripts
 ├── 06_temp/               ← disposable scratch, purgeable without thought
+├── _inbox/                ← drop zone — counted by every scan until empty; not a zone
 └── _to_delete/            ← cleanup staging (the user empties it)
 ```
+
+Folders marked *on demand* are not created by the template. A session makes
+one the first time it is needed and never before, because a tree of empty
+folders predicting subjects nobody has dropped yet is clutter of exactly the
+kind this layout exists to avoid.
 
 The numbers are **not** pipeline order — `02_exchange/` holds both inputs and
 outputs, so no pipeline reading is possible. They order the directories by
@@ -98,11 +116,35 @@ correct against or something to imitate.
   another project. The draft is instantiated from it by copy; it is never
   edited, and a sample is stripped to its skeleton on the way (R12).
 
-`01_basis/` is not part of the conversation. **The RFQ you are answering is
-`02_exchange/received/`, not reference** — it opened the conversation your
-document will close. **The client's comments sheet on your last submission is
-`received/`** — it is your own document returned marked up. `reference/` is for
-what nobody sent you as part of this conversation.
+`01_basis/` is not part of the conversation — and on a real project the
+conversation is narrower than it looks. **`02_exchange/` is the conversation
+*about the documents being written*:** the request or instruction that asks
+for one, the comments sheet that comes back on one, the approval, the
+submission itself. The drawings, the specification, the site photos, the
+standards — material the documents are written *from* — are `reference/`
+**whoever sent them**, because they are not correspondence about these
+documents; they are what the documents rest on. A session that filed every
+client drawing under `received/` would swell the exchange log with rows that
+answer no question the log exists to answer. The test is: would this row tell
+me what was asked, what was submitted, or what came back on a submission? If
+not, it is reference.
+
+If the same real project also has a `cowork-contractor` repository, the
+drawings and the contract live there as the record; this repository holds
+reference **copies**, and each dataset md names where the original is.
+
+**Sub-folders are by subject, never by document, and made on demand.**
+`reference/` starts flat. When a set arrives or a subject accumulates — a
+batch of photos from one walk, the drawing register, the specification
+sections — the session creates a folder for it, named for the subject
+(`photos/2026-08-12_north-quay/`, `drawings/`, `spec/`), and files into it.
+Never a folder per deliverable: a drawing serves three method statements and
+exists once; which documents use it is recorded in the mds (the document md's
+*Inputs*, the dataset md's *Downstream use*), not in the tree. The same on
+demand, by-slug rule applies inside the exchange — `issued/<slug>/` and
+`received/<slug>/` once a document has more than a file or two there — and
+inside `04_working/analysis/`. Direction and role stay folder boundaries; the
+sub-folders inside them carry no meaning and can be adopted at any time.
 
 Within a revision, **snapshot and return are a folder boundary**: the frozen
 draft sits in `Rnn/`, and anything that came back on it — a colleague's marked-up
@@ -114,9 +156,12 @@ received document.
 Each logical dataset in a frozen zone has one context md in
 `00_AI_context/datasets/`. Granularity is the *logical dataset*, not the file:
 a singular document gets its own; a series or a negotiation thread gets one md
-covering the whole thing, with a member table inside. An example or a template
-gets one too, and its md says what to take from it, what not to take, and
-which of its terms must not appear in the draft (R12).
+covering the whole thing, with a member table inside. **A set of media is one
+dataset**: the photos from one site walk, the drawing issue of one date, get
+one md saying what the set shows and which documents draw on it — never one md
+per photo. An example or a template gets one too, and its md says what to take
+from it, what not to take, and which of its terms must not appear in the draft
+(R12).
 
 Each **deliverable** has one document md in `00_AI_context/documents/<slug>.md`
 — the authoring counterpart of a dataset md. A dataset md describes something
@@ -130,12 +175,22 @@ the revision log and the WORKLOG. Two of its tables are read by their gaps: the
 asked", the **feedback register** answers "have we done everything you said".
 Neither can be reconstructed from the draft.
 
-**R3 — Ingestion.** Anything arriving from outside is filed the same way, by a
-named step: into `02_exchange/received/` if it is part of the conversation, or
-`01_basis/<role>/` if it is reference material, an example or a template; its
-context md written or extended; a row appended to the exchange LOG for anything
-received; the text layer extracted; INDEX and MANIFEST regenerated. Nothing
-raw is worked on where it landed.
+**R3 — Ingestion, and the inbox.** Anything arriving from outside is filed the
+same way, by a named step: into `02_exchange/received/` if it is part of the
+conversation about the documents, or `01_basis/<role>/` — and within
+`reference/`, the subject folder, existing or new — if it is what they rest on;
+its context md written or extended; a row appended to the exchange LOG for
+anything received; the text layer extracted; INDEX and MANIFEST regenerated.
+Nothing raw is worked on where it landed.
+
+**`_inbox/` is where things land.** Drop a batch of photos, a drawing issue, a
+spec section there and stop thinking about it; the next session-start scan
+counts what is waiting and files it by this rule. Drop a batch as a folder
+(`_inbox/2026-08-12_north-quay/`) and it arrives as one set, one line, one
+decision. The inbox is not a zone: nothing in it is authoritative, nothing in
+it is quoted, nothing in it is extracted, and every scan says how many files
+it holds until it is empty. A file dropped anywhere else still surfaces as NEW
+and is filed the same way — the inbox is the courtesy, not the rule.
 
 **Text pasted into a chat window is not ingestion.** An email quoted into a
 session so it can be read, checked or answered is working material. A session
@@ -225,6 +280,20 @@ the project has two truths. Passages the document md's outline marks
 names them. Nothing in `04_working/` is authoritative and nothing there is
 evidence.
 
+**The draft folder holds the document and its true companions, nothing
+else.** Photos and figures live in `01_basis/reference/` or
+`04_working/analysis/<slug>/` and are embedded; anything loose in
+`drafts/<slug>/` is copied by every freeze.
+
+**Text the project reuses across documents is written once, in
+`04_working/library/`.** The project description, the site, the parties, the
+emergency arrangements, the standard method paragraphs — on a project of ten
+method statements these are written for the first and needed by the other
+nine, and copying from the last document is how they drift. The library is
+mutable and project-specific: one file per block, created on demand; a draft
+takes a copy; the library is updated only on instruction. It is not a twin of
+any draft, and a draft's copy may lawfully diverge from it.
+
 **R7 — Index, manifest and the session-start scan.** `INDEX.md` lists every
 file with a one-line description; `MANIFEST.json` records path, size, mtime and
 sha256. Both are regenerated by `05_tools/update_index.py` after any file
@@ -246,8 +315,20 @@ severity of a result depends on where it is:
   status column — then, and only then, edit.
 - **CHANGED elsewhere in `04_working/`** → normal. That is analysis being
   worked on.
+- **`_inbox/` not empty** → say how many files are waiting and file them
+  (R3). Do not read figures out of them in the meantime.
 - **MISSING DIR** → a directory of the schema is gone. Recreate it, empty, and
   say so; anything it held is listed as MISSING and is the real event.
+
+The scan **rolls media up**. A folder holding ten or more photos, drawings,
+archives or videos is one line in `INDEX.md` — `photos/walk-01/ — 142 media
+files (.jpg ×142) — your description` — and one line in a `--diff` section,
+with the count; the manifest still records every file, and Office documents
+and PDFs are never rolled up, since each of those is something a session opens
+and cites. Write the folder's one-line description on that line; it survives
+regeneration like any other. The inbox rolls up too: sixty photos waiting
+there are one line saying sixty photos are waiting, which is what you need to
+know before a session files them.
 
 **R8 — Never delete; stage instead.** Cleanup means moving files into
 `_to_delete/` under non-colliding names and reporting what was moved. The user

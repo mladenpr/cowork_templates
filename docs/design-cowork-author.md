@@ -360,6 +360,32 @@ method statement, report/study, comments-resolution response); `docs/pattern.md`
 gains the failure modes behind R11 and R12; CHANGELOG entry `cowork-author
 0.1.0`.
 
+## Addendum — 0.2.0: one project, many documents (2026-08-19)
+
+Two constraints arrived after 0.1.0 and changed the reading of the design
+without changing its rules. First, the template is for the heavy lifting —
+documents developed from the ground up on a real project; a priced quotation
+or the revision of a document already issued is ordinarily consultant work.
+Second, and structurally the important one: **one author repository per real
+project, all of its documents in it**, created once, with years of drops —
+photos, drawings, spec sections — and still legible after ten documents.
+
+What 0.1.0 already had for this: the slug level everywhere it matters. What it
+lacked: a drop zone; any statement of how `reference/` is sub-foldered; any
+home for text reused across documents; and tooling that stays readable at
+hundreds of media files. 0.2.0 adds `_inbox/` (the contractor's, counted by
+every scan), `04_working/library/` (on demand), sub-folders **by subject,
+never by document, made on demand** — the user's ruling: no predefined subject
+folders, because a tree of empty folders predicting subjects nobody has
+dropped yet is the clutter the template exists to avoid — one dataset md per
+media set, and a media roll-up in `INDEX.md`, in `--diff` and in the
+extractor's report (ten or more media files in a folder become one line with a
+count; the manifest still records every file; the inbox rolls up too — a
+batch dropped as a folder is one line and one filing decision).
+It also states what the exchange *is* on a real project: the conversation
+about the documents — requests, comments sheets, approvals, submissions — and
+that drawings, specifications and photos are reference whoever sent them.
+
 ## Decisions taken
 
 All seven as recommended (first option in each), 2026-08-19. Ordered by how

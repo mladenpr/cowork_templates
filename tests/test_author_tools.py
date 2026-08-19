@@ -244,6 +244,84 @@ class Scan(Project):
         self.assertNotIn("06_temp", self.read("00_AI_context/INDEX.md"))
 
 
+    def test_inbox_is_counted_until_empty_and_is_schema(self):
+        self.touch("_inbox/IMG_0001.jpg")
+        self.touch("_inbox/spec.pdf")
+        code, out = self.diff()
+        self.assertEqual(code, 1, out)
+        self.assertIn("2 file(s) in _inbox/ awaiting filing", out)
+        self.assertIn("NEW      _inbox/IMG_0001.jpg", out)
+        code, out = self.reindex()
+        self.assertIn("2 file(s) in _inbox/", out)
+        # baselined: no longer NEW, still counted, every scan
+        code, out = self.diff()
+        self.assertNotIn("NEW", out)
+        self.assertIn("2 file(s) in _inbox/", out)
+        os.remove(self.path("_inbox", "IMG_0001.jpg"))
+        os.remove(self.path("_inbox", "spec.pdf"))
+        os.rmdir(self.path("_inbox"))
+        self.assertIn("_inbox", index.missing_dirs(self.proj))
+
+    def photos(self, folder, n, ext=".jpg", start=1):
+        for i in range(start, start + n):
+            self.touch(f"{folder}/IMG_{i:04d}{ext}", b"\xff\xd8" + bytes([i % 251]))
+
+    def test_media_folders_roll_up_in_index_diff_and_inbox(self):
+        self.photos("01_basis/reference/photos/walk-01", 12)
+        self.photos("01_basis/reference/photos/walk-01", 2, ".png", 13)
+        self.touch("01_basis/reference/photos/walk-01/notes.txt", b"what each shows")
+        self.photos("01_basis/reference/photos/walk-02", 9)      # below threshold
+        self.photos("_inbox", 11)                                  # rolls up too
+        code, out = self.diff()
+        self.assertEqual(code, 1, out)
+        self.assertIn("NEW      01_basis/reference/photos/walk-01/ — 14 media files (.jpg ×12, .png ×2)", out)
+        self.assertNotIn("walk-01/IMG_0001.jpg", out)
+        self.assertIn("NEW      01_basis/reference/photos/walk-01/notes.txt", out)
+        self.assertIn("NEW      01_basis/reference/photos/walk-02/IMG_0009.jpg", out)
+        self.assertIn("NEW      _inbox/ — 11 media files (.jpg ×11)", out)
+        self.assertIn("11 file(s) in _inbox/ awaiting filing", out)
+        self.assertIn("INBOX     _inbox/ — 11 media files (.jpg ×11)", out)
+        self.assertNotIn("INBOX     _inbox/IMG_0001.jpg", out)
+        code, out = self.reindex()
+        self.assertIn("2 media folder(s) rolled up", out)
+        idx = self.read("00_AI_context/INDEX.md")
+        self.assertIn("- `01_basis/reference/photos/walk-01/` — 14 media files (.jpg ×12, .png ×2) — ", idx)
+        self.assertNotIn("walk-01/IMG_0001.jpg", idx)
+        self.assertIn("walk-01/notes.txt", idx)
+        self.assertIn("walk-02/IMG_0001.jpg", idx)
+        self.assertIn("- `_inbox/` — 11 media files (.jpg ×11) — ", idx)
+        self.assertNotIn("_inbox/IMG_0001.jpg", idx)
+        # the manifest still records every file
+        import json
+        with open(self.path("00_AI_context", "MANIFEST.json"), encoding="utf-8") as f:
+            paths = {x["path"] for x in json.load(f)["files"]}
+        self.assertIn("01_basis/reference/photos/walk-01/IMG_0001.jpg", paths)
+        # a description written on the folder line survives, and the count
+        # is not read back as the description
+        idx = idx.replace(
+            "- `01_basis/reference/photos/walk-01/` — 14 media files (.jpg ×12, .png ×2) — ",
+            "- `01_basis/reference/photos/walk-01/` — 14 media files (.jpg ×12, .png ×2) — site walk, north quay")
+        with open(self.path("00_AI_context", "INDEX.md"), "w", encoding="utf-8") as f:
+            f.write(idx)
+        self.photos("01_basis/reference/photos/walk-01", 1, ".jpg", 15)
+        self.reindex()
+        idx = self.read("00_AI_context/INDEX.md")
+        self.assertIn("- `01_basis/reference/photos/walk-01/` — 15 media files (.jpg ×13, .png ×2) — site walk, north quay", idx)
+        # neither the described folder nor the undescribed one self-appends
+        self.assertEqual(idx.count("media files"), 2)
+        self.assertIn("- `_inbox/` — 11 media files (.jpg ×11) — \n", idx)
+        self.reindex()
+        idx = self.read("00_AI_context/INDEX.md")
+        self.assertEqual(idx.count("site walk, north quay"), 1)
+        self.assertEqual(idx.count("media files"), 2)
+        # a folder that loses files is one MISSING line too
+        for i in range(1, 13):
+            os.remove(self.path("01_basis", "reference", "photos", "walk-01", f"IMG_{i:04d}.jpg"))
+        code, out = self.diff()
+        self.assertIn("FROZEN ZONE MOVED", out)           # photos in basis are frozen
+        self.assertIn("MISSING  01_basis/reference/photos/walk-01/IMG_0001.jpg", out)
+
+
 # --------------------------------------------------------------------------
 # the extractor
 # --------------------------------------------------------------------------
@@ -275,6 +353,18 @@ class Extractor(Project):
         self.extract()
         self.assertFalse(os.path.exists(
             self.path("04_working", "_extracted", "04_working")))
+
+    def test_report_rolls_up_opaque_folders(self):
+        for i in range(1, 12):
+            self.touch(f"01_basis/reference/photos/IMG_{i:03d}.jpg")
+        self.touch("01_basis/reference/photos/site-plan.dwg")
+        self.touch("01_basis/reference/one.dwg")
+        code, out = self.extract("--report")
+        self.assertEqual(code, 0, out)
+        self.assertIn("01_basis/reference/photos/  12 not extractable (image ×11, CAD drawing ×1)", out.replace("   ", " ").replace("  ", " ").replace("photos/ ", "photos/  "))
+        self.assertNotIn("IMG_001.jpg", out)
+        self.assertIn("01_basis/reference/one.dwg", out)
+        self.assertIn("not extractable (CAD drawing)", out)
 
     def test_extract_file_reads_any_path_and_writes_nothing(self):
         p = self.draft(BASE, comments=[("M", "fix")])

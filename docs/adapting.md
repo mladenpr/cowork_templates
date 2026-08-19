@@ -86,16 +86,20 @@ without opening a drawing.
 ## Writing the document itself — `cowork-author`
 
 The five cases above are read against `cowork-consultant`, whose zones are
-about the exchange. When the project *is* the document — the proposal, the
-method statement, the report, the response to a comments sheet — the middle of
-the work is the draft going round between you and the agent across sessions,
-and that is what `cowork-author` adds zones for. The same reading, by
-document type:
+about the exchange. When the work is writing a project's documents from the
+ground up — the method statements, the plans, the reports, the technical
+proposals — the middle of the work is each draft going round between you and
+the agent across sessions, and that is what `cowork-author` adds zones for.
+One author repository serves a whole real project: every document under its
+own slug, the drops for all of them through one `_inbox/`, reference grown by
+subject as sets arrive. A priced quotation, or the revision of a document that
+has already gone out, is lighter work and usually better done in a consultant
+repository. The same reading, by document type:
 
 | Document | `01_basis/reference/` | `01_basis/examples/` and `templates/` | `02_exchange/` | What the document md's coverage table is seeded from |
 |---|---|---|---|---|
-| **Proposal / RFQ response** | Rate library, CVs, standard methodology, past-project data you will cite | A past proposal that won; the company proposal shell | RFQ and addenda in; the submission and clarifications out | Every question and evaluation criterion in the RFQ |
-| **Method statement / plan** | Specification, drawings, standards, risk assessments | A method statement the reviewer liked; the company MS shell | The instruction to produce it in; the MS out; the reviewer's comments sheet back in | Scope items and specification clauses it must address |
+| **Technical proposal** (not a priced quotation — that is consultant work) | Rate library, CVs, standard methodology, past-project data you will cite | A past proposal that won; the company proposal shell | RFQ and addenda in; the submission and clarifications out | Every question and evaluation criterion in the RFQ |
+| **Method statement / plan** | Specification, drawings, site photos, standards, risk assessments — whoever sent them; a set of photos is one dataset | A method statement the reviewer liked; the company MS shell | The instruction to produce it in; the MS out; the reviewer's comments sheet back in | Scope items and specification clauses it must address |
 | **Report / study** | Data, calculations, papers, standards | A comparable report; the report shell | Often thin — the brief in, the report out, peer comments back | The brief's questions; the terms of reference |
 | **Response to comments** | The document being commented on, at the revision commented | The previous response, for its format | The comments sheet in (it is your document returned marked up); the response and the revised document out | Every comment, one row each — the table *is* the response skeleton |
 

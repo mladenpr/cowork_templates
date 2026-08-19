@@ -51,14 +51,18 @@
 
 ## Inputs
 
-> What the document rests on, by role, with the path each was filed under and
-> the dataset md that describes it. The request being answered is in
-> `02_exchange/received/`, not here (R1).
+> What the documents rest on, by role, with the path each was filed under and
+> the dataset md that describes it. Drawings, specifications, photos and
+> standards are reference whoever sent them; only the conversation *about* the
+> documents — requests, comments sheets, approvals — is in `02_exchange/` (R1).
+> Sub-folders under `reference/` are made on demand and by subject as material
+> arrives; list the ones in use here so a session files into the right one.
 
-- **Reference** (`01_basis/reference/`):
+- **Reference** (`01_basis/reference/`): — subject folders in use: none yet
 - **Examples** (`01_basis/examples/`): — and what each is an example *of*
-- **Template / shell** (`01_basis/templates/`):
-- **Received** (`02_exchange/received/`): the RFQ, scope, comments sheet
+- **Templates / shells** (`01_basis/templates/`): — one per document type
+- **Received** (`02_exchange/received/`): the requests, comments sheets
+- **Library** (`04_working/library/`): reusable project text blocks, once written
 
 ## Conventions that matter
 

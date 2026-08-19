@@ -1102,6 +1102,46 @@ def print_orphans(root):
     return found
 
 
+# A folder holding this many opaque files (photos, drawings, archives) is
+# reported as one line with a count by kind, not one line per file — the same
+# threshold update_index.py uses for INDEX.md. Nothing in it is extractable
+# either way; the question the report answers for such a folder is "how much
+# is there", not "which".
+ROLLUP_MIN = 10
+
+
+def rolled_up_opaque(rows):
+    """Collapse per-folder runs of opaque files into one row each.
+
+    rows: [(rel, state, kind)] in path order. Opaque rows are grouped by their
+    folder; a folder with ROLLUP_MIN or more becomes a single row placed where
+    its first file was. Everything else passes through unchanged.
+    """
+    by_dir = {}
+    for rel, state, kind in rows:
+        if kind == "opaque":
+            folder = rel.rsplit("/", 1)[0] + "/"
+            by_dir.setdefault(folder, []).append((rel, state))
+    big = {d: v for d, v in by_dir.items() if len(v) >= ROLLUP_MIN}
+    out, done = [], set()
+    for rel, state, kind in rows:
+        folder = rel.rsplit("/", 1)[0] + "/"
+        if kind == "opaque" and folder in big:
+            if folder in done:
+                continue
+            done.add(folder)
+            kinds = {}
+            for _, st in big[folder]:
+                label = st[len("not extractable ("):-1]
+                kinds[label] = kinds.get(label, 0) + 1
+            by_kind = ", ".join(f"{k} ×{n}" for k, n in
+                                sorted(kinds.items(), key=lambda kv: (-kv[1], kv[0])))
+            out.append((folder, f"{len(big[folder])} not extractable ({by_kind})"))
+        else:
+            out.append((rel, state))
+    return out
+
+
 def report(root, reader_cls, max_rows):
     rows = []
     for full, rel in sources(root):
@@ -1121,11 +1161,12 @@ def report(root, reader_cls, max_rows):
             why = staleness(out_path, os.stat(full), max_rows)
             if why:
                 state += f" — STALE ({why})"
-        rows.append((rel, state))
+        rows.append((rel, state, kind))
     if not rows:
         print(f"No files under {' / '.join(SOURCE_DIRS)}.")
         print_orphans(root)
         return 0
+    rows = rolled_up_opaque(rows)
     width = max(len(r[0]) for r in rows)
     print(f"{'source'.ljust(width)}  state")
     print(f"{'-' * width}  {'-' * 40}")

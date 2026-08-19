@@ -42,6 +42,20 @@ Behavior:
   session start happened since the last index — in practice, the user edited
   the draft by hand (R6). Not an alarm, not routine: read it before editing it.
   CHANGED elsewhere in 04_working/ is routine.
+- Files sitting in _inbox/ are counted and reported. The inbox is where things
+  get dropped, not a zone: anything in it is unfiled and authoritative for
+  nothing, and every scan says how many are waiting until it is empty (R3).
+- Media-heavy folders are rolled up. A project that writes method statements
+  holds hundreds of photos and drawings, and an index that lists every one is
+  an index nobody reads. When a folder holds ROLLUP_MIN or more media files
+  (images, CAD, archives, video — MEDIA_EXT below), INDEX.md gives that folder
+  one line with a count by extension, and --diff reports the folder once with
+  a count rather than every file. The manifest still records every file, so
+  nothing is lost to the scan; only the reading is shortened. A one-line
+  description can be written against the folder line and survives
+  regeneration like any other. The inbox rolls up like anywhere else: what a
+  session needs to know about sixty photos waiting there is that sixty photos
+  are waiting, and it lists the folder when it files them.
 - Both modes also print WARNINGS: suspected sync-conflict copies, and names
   OneDrive/SharePoint will refuse to sync. Warnings never change the exit code
   on their own — they are for the human to resolve.
@@ -102,6 +116,23 @@ FROZEN_EXEMPT = ("02_exchange/LOG.md", "03_revisions/LOG.md")
 # the draft before it writes it.
 DRAFT_DIR = "04_working/drafts/"
 
+# Staging for arrivals that have not been filed yet (R3). Not a zone: nothing
+# in it is authoritative, and it is meant to be emptied.
+INBOX_DIR = "_inbox/"
+
+# Media: files no session reads as text and no index line describes usefully
+# one by one. A folder holding ROLLUP_MIN or more of them is listed once, with
+# a count by extension, in INDEX.md and in --diff. Office documents and PDFs
+# are never media — each of those is something a session opens and cites.
+MEDIA_EXT = {
+    ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".heic", ".heif", ".tif", ".tiff",
+    ".svg", ".webp", ".raw", ".cr2", ".nef",
+    ".mp4", ".mov", ".avi", ".mkv", ".m4v", ".mp3", ".wav", ".m4a",
+    ".dwg", ".dxf", ".dgn", ".ifc", ".rvt", ".nwd", ".nwc", ".skp", ".3dm",
+    ".zip", ".7z", ".rar", ".tar", ".gz",
+}
+ROLLUP_MIN = 10
+
 # The schema (README). Checked by name because the manifest cannot see them:
 # it records files, and an empty directory holds none. Recreating one is safe
 # — it holds nothing — but that it went missing is worth a line, and if it
@@ -113,7 +144,7 @@ REQUIRED_DIRS = (
     "03_revisions",
     "04_working", "04_working/drafts", "04_working/analysis",
     "04_working/_extracted",
-    "05_tools", "06_temp", "_to_delete",
+    "05_tools", "06_temp", "_inbox", "_to_delete",
 )
 
 
@@ -127,6 +158,70 @@ def frozen_change_alarm(rel):
 
 def draft(rel):
     return rel.startswith(DRAFT_DIR)
+
+
+def media(rel):
+    return os.path.splitext(rel)[1].lower() in MEDIA_EXT
+
+
+def rollups(paths):
+    """Folders whose media files are listed as one line: {folder/: [paths]}.
+
+    A folder qualifies when it holds ROLLUP_MIN or more media files directly
+    (sub-folders count on their own). Its non-media files are still listed one
+    by one — a README.txt or a CSV of EXIF data beside 300 photos is worth a
+    line of its own.
+    """
+    by_dir = {}
+    for rel in paths:
+        if not media(rel):
+            continue
+        folder = rel.rsplit("/", 1)[0] + "/" if "/" in rel else ""
+        by_dir.setdefault(folder, []).append(rel)
+    return {d: sorted(v) for d, v in by_dir.items() if len(v) >= ROLLUP_MIN}
+
+
+def rollup_label(folder, members):
+    counts = {}
+    for rel in members:
+        ext = os.path.splitext(rel)[1].lower()
+        counts[ext] = counts.get(ext, 0) + 1
+    by_ext = ", ".join(f"{ext} ×{n}" for ext, n in
+                       sorted(counts.items(), key=lambda kv: (-kv[1], kv[0])))
+    return f"{folder} — {len(members)} media files ({by_ext})"
+
+
+def condensed(paths):
+    """Paths with rolled-up media replaced by one folder entry each.
+
+    Returns [(display, is_folder)] in path order, so a --diff section that
+    would list 142 photos lists the folder once, with the count.
+    """
+    groups = rollups(paths)
+    hidden = {p for members in groups.values() for p in members}
+    out, seen = [], set()
+    for rel in sorted(paths):
+        if rel in hidden:
+            folder = rel.rsplit("/", 1)[0] + "/"
+            if folder not in seen:
+                seen.add(folder)
+                out.append((rollup_label(folder, groups[folder]), True))
+        else:
+            out.append((rel, False))
+    return out
+
+
+def report_inbox(paths):
+    """Anything sitting unfiled is worth saying out loud, every time."""
+    waiting = sorted(p for p in paths if p.startswith(INBOX_DIR))
+    if not waiting:
+        return
+    print(f"\n{len(waiting)} file(s) in {INBOX_DIR} awaiting filing (R3):")
+    lines = condensed(waiting)
+    for label, _ in lines[:20]:
+        print(f"  INBOX     {label}")
+    if len(lines) > 20:
+        print(f"  … and {len(lines) - 20} more")
 
 
 # Names SharePoint/OneDrive refuse to sync. Characters first, then the
@@ -351,14 +446,13 @@ def diff(root, args):
             print(f"  CHANGED  {p}")
         print()
 
-    for p in added:
-        print(f"NEW      {p}")
-    for p in changed:
-        if not frozen_change_alarm(p) and not draft(p):
-            print(f"CHANGED  {p}")
-    for p in missing:
-        if not frozen(p):
-            print(f"MISSING  {p}")
+    for label, _ in condensed(added):
+        print(f"NEW      {label}")
+    for label, _ in condensed(
+            [p for p in changed if not frozen_change_alarm(p) and not draft(p)]):
+        print(f"CHANGED  {label}")
+    for label, _ in condensed([p for p in missing if not frozen(p)]):
+        print(f"MISSING  {label}")
     dirty = bool(added or changed or missing or gone)
     if not dirty:
         print(f"Clean — {len(new)} files match the manifest "
@@ -372,12 +466,22 @@ def diff(root, args):
                  else "")
               + (f"; {len(gone)} schema director"
                  f"{'y' if len(gone) == 1 else 'ies'} missing." if gone else "."))
+    report_inbox(new)
     print_warnings(*warnings_for(new, args.device))
     return 1 if dirty else 0
 
 
+ROLLUP_TEXT = re.compile(r"^\d+ media files \([^)]*\)(?:\s*—\s*(.*))?$")
+
+
 def load_descriptions(root):
-    """Parse existing INDEX.md lines of the form `- `path` — description`."""
+    """Parse existing INDEX.md lines of the form `- `path` — description`.
+
+    A rolled-up folder line carries a generated count before the description
+    (`- `photos/` — 142 media files (.jpg ×142) — site walk, 12 Aug`); the
+    count is regenerated every time and must not be read back as the
+    description, or it would be appended to itself on every run.
+    """
     p = os.path.join(root, "00_AI_context", "INDEX.md")
     desc = {}
     if not os.path.exists(p):
@@ -386,8 +490,15 @@ def load_descriptions(root):
     with open(p, encoding="utf-8") as f:
         for line in f:
             m = pat.match(line.rstrip("\n"))
-            if m and m.group(2):
-                desc[m.group(1)] = m.group(2).strip()
+            if not (m and m.group(2)):
+                continue
+            path, text = m.group(1), m.group(2).strip()
+            if path.endswith("/"):
+                r = ROLLUP_TEXT.match(text)
+                if r:
+                    text = (r.group(1) or "").strip()
+            if text:
+                desc[path] = text
     return desc
 
 
@@ -416,10 +527,20 @@ def regenerate(root, name, args):
     with open(os.path.join(ctx, "MANIFEST.json"), "w", encoding="utf-8") as f:
         json.dump({"generated": ts, "project": name, "files": files}, f, indent=1)
 
-    groups = {}
+    rolled = rollups(f["path"] for f in files)
+    hidden = {p for members in rolled.values() for p in members}
+    groups, emitted = {}, set()
     for fi in files:
         top = fi["path"].split("/")[0] if "/" in fi["path"] else "(root)"
-        groups.setdefault(top, []).append(fi)
+        if fi["path"] in hidden:
+            folder = fi["path"].rsplit("/", 1)[0] + "/"
+            if folder in emitted:
+                continue
+            emitted.add(folder)
+            groups.setdefault(top, []).append(
+                {"path": folder, "rollup": rollup_label(folder, rolled[folder])})
+        else:
+            groups.setdefault(top, []).append(fi)
 
     lines = [
         f"# INDEX — {name}",
@@ -435,14 +556,24 @@ def regenerate(root, name, args):
         lines.append("")
         for fi in groups[g]:
             d = desc.get(fi["path"], "")
-            lines.append(f"- `{fi['path']}`" + (f" — {d}" if d else " — "))
+            if "rollup" in fi:
+                # one line for the folder: `folder/` — n media files (…) — desc
+                lines.append(f"- `{fi['path']}` — "
+                             f"{fi['rollup'].split(' — ', 1)[1]}"
+                             + (f" — {d}" if d else " — "))
+            else:
+                lines.append(f"- `{fi['path']}`" + (f" — {d}" if d else " — "))
         lines.append("")
     with open(os.path.join(ctx, "INDEX.md"), "w", encoding="utf-8") as f:
         f.write("\n".join(lines))
     print(f"INDEX.md and MANIFEST.json regenerated — {len(files)} files"
-          f"{' (hashed)' if with_hash else ''}.")
+          f"{' (hashed)' if with_hash else ''}"
+          + (f"; {len(rolled)} media folder(s) rolled up in INDEX.md"
+             if rolled else "") + ".")
     print_missing_dirs(missing_dirs(root))
-    print_warnings(*warnings_for({f["path"] for f in files}, args.device))
+    paths = {f["path"] for f in files}
+    report_inbox(paths)
+    print_warnings(*warnings_for(paths, args.device))
     return 0
 
 

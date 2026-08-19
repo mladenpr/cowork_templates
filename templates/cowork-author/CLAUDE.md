@@ -3,8 +3,9 @@
 Project: **{{PROJECT_NAME}}**{{CLIENT_SUFFIX}}
 
 This repository follows a fixed schema and a set of working rules. Its centre
-is a document being written, across many sessions, by you and the user
-together. Before doing any work in this project:
+is the documents of one real project, written from the ground up across many
+sessions by you and the user together — several of them, each under its own
+slug, in this one folder. Before doing any work in this project:
 
 1. Read `00_AI_context/PROJECT.md` — the brief, who the document is for, the
    deliverables table, and the conventions.
@@ -26,6 +27,11 @@ together. Before doing any work in this project:
      report what changed, and record it (procedure below). Do not undo it.
    - **CHANGED elsewhere in `04_working/` or `00_AI_context/`** → expected.
      Do not raise it. (`06_temp/` is not scanned at all.)
+   - **`_inbox/` not empty** → say how many files are waiting and file them
+     (procedure below). Do not read figures out of them in the meantime.
+   - **A folder line with a count** (`photos/walk-01/ — 142 media files …`)
+     → the scan rolled a media folder up. Treat the folder as the unit; the
+     manifest still holds every file.
    - **`MISSING DIR`** → recreate it, empty, and say so. It held nothing; if
      it did, those files are listed as MISSING and that is the real event.
    - **`CONFLICT?` or `BAD NAME`** → report and do not touch the file.
@@ -55,10 +61,28 @@ together. Before doing any work in this project:
   *received*. In `01_basis/`, `reference/` is to be correct against,
   `examples/` is to imitate in form only, `templates/` is the shell the draft
   is copied from — never edited, never quoted.
+- **The exchange is the conversation about the documents, not the project's
+  whole paper trail.** Requests, comments sheets, approvals, submissions go in
+  `02_exchange/`. Drawings, specifications, photos, standards are
+  `01_basis/reference/` whoever sent them (R1).
+- **Sub-folders are made on demand, by subject, never by document.** Do not
+  create folders for subjects that have not arrived. When a set arrives or a
+  subject accumulates, create one folder named for it and file into it; which
+  documents use the material is recorded in the mds, not in the tree.
+- **`_inbox/` is not a zone.** It is where the user drops things. Nothing in it
+  is quoted, extracted or relied on; every scan counts it until it is empty. A
+  batch dropped as a folder is filed as one set.
 - **The draft on disk is the truth.** Read it before you write it. Never
   regenerate it from memory or from the document md; never keep a markdown
   master beside it. One live draft per deliverable, in
-  `04_working/drafts/<slug>/`, revised in place (R6).
+  `04_working/drafts/<slug>/`, revised in place (R6) — the document and its
+  true companions only; photos and figures live in basis or analysis and are
+  embedded, never left loose beside the draft.
+- **Reused project text lives in `04_working/library/`, once.** The project
+  description, the site, the parties, the standard method paragraphs: written
+  the first time they are needed, saved there as one file per block, taken as a
+  copy into each draft. Updated only on instruction. Never copied from the
+  last document instead (R6).
 - **Locked and user-edited passages are not yours.** The outline in the
   document md says which sections are `locked` or `user-edited`. Do not
   rewrite them without an instruction that names the section.
@@ -76,31 +100,43 @@ together. Before doing any work in this project:
 
 ## Procedure: ingest a document that arrived
 
-Triggered whenever a **file** reaches the project from outside — uploaded into
-the chat, an email attachment, dropped into the folder, found by the scan. Text
-pasted into the chat window is not a file and is not ingested (see below).
+Triggered whenever a **file** reaches the project from outside — dropped into
+`_inbox/`, uploaded into the chat, an email attachment, found by the scan
+anywhere it should not be. Text pasted into the chat window is not a file and
+is not ingested (see below). A batch is ingested as a batch: fifty photos from
+one walk are one decision, one folder, one md.
 
 1. Decide the zone, then the role, and ask if it is not obvious:
-   `02_exchange/received/` if it is part of the conversation with another
-   party — the RFQ being answered, the client's comments sheet;
-   `01_basis/reference/` if it is material to be correct against;
+   `02_exchange/received/` if it is the conversation about the documents — the
+   request or instruction for one, the client's comments sheet on one;
+   `01_basis/reference/` if it is material the documents are written from —
+   drawings, specifications, photos, standards, data — whoever sent it;
    `01_basis/examples/` if it shows what good looks like;
-   `01_basis/templates/` if it is the shell to write in.
-2. Move the file in unchanged. Do not rename it, do not convert it, do not
-   "tidy" the filename — R1. If the name is useless, that is what the context
-   md is for.
-3. Write or extend its context md in `00_AI_context/datasets/`. For an example
-   or a template, fill in what to take from it, what not to take, and the
-   **terms to check for** — the source project's names, figures and references
-   (R12). For a series or a thread, add a member-table row instead of a new md.
-4. Append a row to `02_exchange/LOG.md` for anything filed under `received/`.
-5. If it is the RFQ, scope or comments sheet the document answers to, add its
-   items to the **requirements coverage** table of the document md, one row
+   `01_basis/templates/` if it is a shell to write in.
+2. Inside `reference/`, decide the subject folder: an existing one if the
+   subject has one, a new one named for the subject if a set is arriving or a
+   subject is accumulating (`drawings/`, `spec/`,
+   `photos/2026-08-12_north-quay/`), the zone root while it is one file. By
+   subject, never by deliverable. Inside `received/` and `issued/`, by slug
+   once a document has more than a file or two there.
+3. Move the files in unchanged. Do not rename, do not convert, do not "tidy"
+   filenames — R1. If a name is useless, that is what the context md is for.
+4. Write or extend the context md in `00_AI_context/datasets/`. A set of media
+   is one dataset with one md: what the set shows, when and where, which
+   documents draw on it. For an example or a template, fill in what to take
+   from it, what not to take, and the **terms to check for** — the source
+   project's names, figures and references (R12). For a series or a thread,
+   add a member-table row instead of a new md.
+5. Append a row to `02_exchange/LOG.md` for anything filed under `received/`.
+6. If it is the request, scope or comments sheet a document answers to, add its
+   items to the **requirements coverage** table of that document md, one row
    each, status `open`.
-6. Run `05_tools/extract_text.py`, then `05_tools/update_index.py`.
-7. Report what was filed, and anything the extraction flagged — a scan needing
+7. Run `05_tools/extract_text.py`, then `05_tools/update_index.py`. Write the
+   one-line description of any rolled-up media folder on its INDEX line.
+8. Report what was filed, and anything the extraction flagged — a scan needing
    OCR, a rights-managed file, tracked changes — since those belong in the
-   context md.
+   context md. If `_inbox/` is not empty afterwards, say what is still in it
+   and why.
 
 ## Email text pasted into the session
 
@@ -170,7 +206,12 @@ feedback.
 2. Make the changes asked for, in the live draft, in place, in the shell's
    styles (R10). Not in a locked section; not in a user-edited passage unless
    the instruction names it. Every figure, date and quotation comes from a file
-   in a frozen zone, read in the source.
+   in a frozen zone, read in the source. Text that other documents on this
+   project will also need — the project description, the site, standard
+   method paragraphs — comes from `04_working/library/` if it is there, and is
+   saved there, one file per block, the first time it is written; photos are
+   embedded from `01_basis/reference/`, figures from
+   `04_working/analysis/<slug>/`.
 3. Update the outline's status column and the feedback register's status
    column as you go — `addressed in <live>` until a freeze assigns the Rnn.
 4. At the end of the session, one WORKLOG entry: sections touched, F-ids
