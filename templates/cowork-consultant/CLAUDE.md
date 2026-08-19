@@ -41,6 +41,10 @@ any work in this project:
   second is a record being written down, not a document being released.
 - **`03_working/` holds one live draft per deliverable**, revised in place —
   not a new file per revision.
+- **`00_AI_context/TEMPLATE.json` is tooling-maintained.** It records which
+  template version this project's scaffolding carries. Only the template
+  toolbox's `new_project.py` and `upgrade_project.py` write it — never edit
+  it, and never "fix" it to match anything.
 - After any file operation, regenerate `INDEX.md` and `MANIFEST.json` with
   `04_tools/update_index.py`.
 

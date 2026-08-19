@@ -13,7 +13,13 @@ What it does:
    `.gitkeep` markers exist only so git tracks empty folders here, and
    `VERSION` only so this script knows what to stamp.
 2. Substitutes the template placeholders in every text file.
-3. Runs the template's `update_index.py` in the new folder to write the first
+3. Writes `00_AI_context/TEMPLATE.json` — the machine-readable stamp: which
+   template, which version, the placeholder values substituted, and a content
+   hash of every scaffolding file as instantiated (CLAUDE.md, README.md, the
+   tools scripts, the `_TEMPLATE.md` stubs). `bin/upgrade_project.py` reads it
+   to tell, later, which scaffolding files were locally edited and which are
+   safe to replace.
+4. Runs the template's `update_index.py` in the new folder to write the first
    INDEX.md / MANIFEST.json baseline.
 
 Templates number their zones differently — the tools directory is `04_tools/`
@@ -34,6 +40,8 @@ Put the destination inside a synced cloud drive, and do NOT `git init` in it
 """
 
 import argparse
+import hashlib
+import json
 import os
 import re
 import shutil
@@ -102,6 +110,56 @@ def frozen_zones(dest):
             and os.path.isdir(os.path.join(dest, d))]
 
 
+def scaffolding_files(root):
+    """Relative paths (with '/') of the files the template owns in a project.
+
+    Scaffolding is what an upgrade may later act on: the session bootstrap,
+    the rules, the tools scripts and the context-file stubs. Everything else
+    a template ships is seed material that becomes project state the moment
+    the project exists. `upgrade_project.py` applies the same rule; the
+    regression tests pin the two to each other.
+    """
+    tools = re.compile(r"^\d\d_tools$")
+    out = set()
+    for dirpath, dirnames, filenames in os.walk(root):
+        dirnames[:] = [d for d in dirnames if d not in ("__pycache__", ".git")]
+        for fn in filenames:
+            rel = os.path.relpath(os.path.join(dirpath, fn), root)
+            rel = rel.replace(os.sep, "/")
+            if rel in ("CLAUDE.md", "README.md") or fn == "_TEMPLATE.md" \
+                    or tools.match(rel.split("/", 1)[0]):
+                out.add(rel)
+    return out
+
+
+def write_stamp(dest, template_name, version, mapping):
+    """00_AI_context/TEMPLATE.json — the machine-readable version stamp."""
+    hashes = {}
+    for rel in sorted(scaffolding_files(dest)):
+        with open(os.path.join(dest, rel.replace("/", os.sep)), "rb") as f:
+            hashes[rel] = hashlib.sha256(f.read()).hexdigest()
+    stamp = {
+        "_comment": ("Template stamp — written by new_project.py, updated by "
+                     "upgrade_project.py. Records which template version this "
+                     "project's scaffolding carries, the placeholder values "
+                     "substituted at creation, and the sha256 of each "
+                     "scaffolding file as tooling last wrote it (null = "
+                     "unknown; treated as locally modified). Do not edit."),
+        "template": template_name,
+        "version": version,
+        "created": {"version": version, "date": mapping["{{DATE}}"]},
+        "mapping": {k.strip("{}"): v for k, v in mapping.items()
+                    if k != "{{TEMPLATE_VERSION}}"},
+        "scaffolding": hashes,
+        "upgrades": [],
+    }
+    path = os.path.join(dest, "00_AI_context", "TEMPLATE.json")
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(stamp, f, indent=2)
+        f.write("\n")
+
+
 def substitute(path, mapping):
     with open(path, encoding="utf-8") as f:
         original = f.read()
@@ -166,6 +224,8 @@ def main():
                 continue
             if os.path.splitext(fn)[1].lower() in TEXT_EXT:
                 substitute(full, mapping)
+
+    write_stamp(dest, args.template, version, mapping)
 
     tools = tools_dir(dest)
     if not tools:
