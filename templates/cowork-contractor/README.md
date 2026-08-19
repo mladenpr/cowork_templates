@@ -26,6 +26,7 @@ up as an empty folder, not as a different structure.
 │   ├── PARTIES.md         ← who is who, and the label each is filed under
 │   ├── INDEX.md           ← every file: path + one-line description
 │   ├── MANIFEST.json      ← scan baseline (path, size, mtime, sha256)
+│   ├── TEMPLATE.json      ← template stamp (tooling-maintained — do not edit)
 │   ├── WORKLOG.md         ← dated decisions and open items
 │   ├── datasets/          ← one context md per logical dataset or thread
 │   └── registers/         ← one md per controlled series (variations, POs, …)
@@ -408,6 +409,9 @@ changes get their own entry.
 Instantiated from the `cowork-contractor` template **v{{TEMPLATE_VERSION}}**
 (<https://github.com/mladenpr/cowork_templates>) on {{DATE}}.
 
-A project is a copy, not a link — nothing propagates from the template after
-this point. This line is how you tell, months later, which rules and which
-tooling this project actually has.
+A project is a copy, not a link — nothing propagates from the template by
+itself. Upgrades are an explicit step: the toolbox's `upgrade_project.py`
+brings the scaffolding up to date, adds a dated line below this footer, and
+keeps the machine-readable record in `00_AI_context/TEMPLATE.json`. This
+footer is how you tell, months later, which rules and which tooling this
+project actually has.

@@ -16,8 +16,8 @@ scan that forces it to notice what changed since last time.
 
 | Template | Version | Use it for |
 |---|---|---|
-| [`cowork-consultant`](templates/cowork-consultant) | 2.0.3 | Consulting engagements — any project that exchanges documents with another party: inputs arrive, work happens, documents are issued. |
-| [`cowork-contractor`](templates/cowork-contractor) | 0.3.0 | Work performed under a contract, from award onwards — either tier, main or sub. Adds a contract zone, party sub-folders, a queryable exchange log and registers. Below 1.0 until it has been run on a live project. |
+| [`cowork-consultant`](templates/cowork-consultant) | 2.1.0 | Consulting engagements — any project that exchanges documents with another party: inputs arrive, work happens, documents are issued. |
+| [`cowork-contractor`](templates/cowork-contractor) | 0.4.0 | Work performed under a contract, from award onwards — either tier, main or sub. Adds a contract zone, party sub-folders, a queryable exchange log and registers. Below 1.0 until it has been run on a live project. |
 
 Templates are versioned independently and each carries its own `VERSION` file;
 see [Versioning](#versioning). Pick one with `--template`.
@@ -32,6 +32,7 @@ see [Versioning](#versioning). Pick one with `--template`.
 │   ├── PROJECT.md         ← the brief: what this is, for whom, conventions
 │   ├── INDEX.md           ← every file, one line each (descriptions survive)
 │   ├── MANIFEST.json      ← scan baseline (path, size, mtime, sha256)
+│   ├── TEMPLATE.json      ← template stamp: version + upgrade record (tooling-maintained)
 │   ├── WORKLOG.md         ← dated decisions, never rewritten
 │   └── datasets/          ← one context md per dataset or negotiation thread
 ├── 01_basis/              ← FROZEN — reference material the work rests on
@@ -122,7 +123,9 @@ carries a `.git` directory, and that is the same sync-client-versus-git fight
 described below, just one level up.
 
 Update it whenever you like — `git -C ~/tools/cowork_templates pull`. Existing
-projects are unaffected either way; a project is a copy, not a link.
+projects are unaffected either way; a project is a copy, not a link. When you
+*want* a project brought up to the toolbox's version, that is an explicit step
+with its own tool — see [Upgrading](#upgrading-a-project-that-already-exists).
 
 ### Per project — make the folder, then fill it
 
@@ -211,12 +214,19 @@ Releases are git tags, and [`CHANGELOG.md`](CHANGELOG.md) carries a section per
 template explaining what each version changed — including what *major*, *minor*
 and *patch* mean for a template as opposed to a library.
 
-Each project records the template and version it was created from, in its own
-`README.md` footer and its first WORKLOG entry. To survey a folder of projects:
+Each project records the template and version it was created from three times:
+in prose, in its own `README.md` footer and its first WORKLOG entry — and
+machine-readably in `00_AI_context/TEMPLATE.json`, which also records the
+placeholder values that were substituted, a content hash of every scaffolding
+file as tooling last wrote it, and every upgrade applied since. To survey a
+folder of projects:
 
 ```bash
 grep -h "Instantiated from" ~/OneDrive/01_PROJECTS/*/README.md
+grep -h '"version"' ~/OneDrive/01_PROJECTS/*/00_AI_context/TEMPLATE.json
 ```
+
+The first shows what each project started as; the second what it is now.
 
 The `VERSION` file itself never reaches a project — `new_project.py` strips it
 on the way through, along with the `.gitkeep` markers. Both are scaffolding for
@@ -230,22 +240,57 @@ v2.
 
 ### Upgrading a project that already exists
 
-A project is a copy, not a link. Nothing propagates once it is created.
+A project is a copy, not a link — nothing propagates by itself. Upgrading is
+an explicit step, and it has a tool:
 
-Within a major version, copying `templates/cowork-consultant/04_tools/*.py` over the
-project's copies and re-running them is safe — the scripts hold no project
-state. **Across v1 → v2 it is not**: the v2 scripts look for `01_basis/` and
-`02_exchange/` and will not find a v1 project's directories.
+```bash
+python3 ~/tools/cowork_templates/bin/upgrade_project.py \
+    ~/OneDrive/01_PROJECTS/ACME-Bridge-Cowork        # --dry-run to look first
+```
 
-Rule changes are a judgement call either way. Update the footer when you
-upgrade, so the version stamp never claims something untrue.
+It acts on the scaffolding and only the scaffolding: `CLAUDE.md`, `README.md`,
+the scripts in the tools zone, and the `_TEMPLATE.md` stubs. Your documents,
+the frozen zones, the context files, the logs and the drafts are never
+upgrade candidates — never rewritten, never moved, never staged for deletion.
+The only project files an upgrade writes are its own record: a dated entry
+appended to `WORKLOG.md`, a line under the README footer, and the stamp.
+
+Within the scaffolding, it decides per file, using the content hashes recorded
+in `00_AI_context/TEMPLATE.json` when the project was created:
+
+- **Unmodified since the tooling last wrote it** → replaced with the new
+  version, placeholders re-substituted.
+- **Locally edited** → left exactly as it is; the new version is written into
+  the temp zone (`05_temp/template-upgrade-v<version>/`) for you to merge or
+  discard. Nothing you wrote is ever overwritten.
+- **No longer shipped by the template** → moved to `_to_delete/` if unmodified
+  — nothing is deleted, per R8 — and left in place if edited.
+- **Missing** → restored.
+
+Every applied upgrade updates the README footer, appends a dated WORKLOG
+entry, and records itself in `TEMPLATE.json`. Afterwards, run the
+session-start scan (`update_index.py --diff`), read it, then rebuild the
+baseline — the tool deliberately does not rebaseline for you, so nothing that
+happened to be pending in the project gets silently absorbed.
+
+**Across a major version it refuses.** A major bump means the schema or the
+rules changed such that an existing project cannot simply adopt them; that
+migration stays a hand job, and a live project may be better finished on the
+rules it started with. For a template still below 1.0.0 the minor is the
+compatibility boundary and is refused the same way.
+
+**Projects created before `TEMPLATE.json` existed** are adopted on the first
+run: template and version are read from the README footer, and the toolbox's
+git history is used to prove which scaffolding files are unmodified. Anything
+it cannot prove is proposed rather than replaced — the failure mode is a
+review copy in the temp zone, never an overwrite.
 
 ### Tests
 
 The scripts have regression tests in [`tests/`](tests) — standard library only,
-one file per template. Each test instantiates the template into a temporary
-directory with `bin/new_project.py` and drives the real scripts, so what is
-tested is what a project gets:
+one file per template plus one for the upgrade path. Each test instantiates
+the template into a temporary directory with `bin/new_project.py` and drives
+the real scripts, so what is tested is what a project gets:
 
 ```bash
 python3 -m unittest discover tests

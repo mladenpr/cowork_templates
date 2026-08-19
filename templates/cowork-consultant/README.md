@@ -19,6 +19,7 @@ directory layout is that distinction made visible.
 │   ├── PROJECT.md         ← high-level project brief
 │   ├── INDEX.md           ← every file: path + one-line description
 │   ├── MANIFEST.json      ← scan baseline (path, size, mtime, sha256)
+│   ├── TEMPLATE.json      ← template stamp (tooling-maintained — do not edit)
 │   ├── WORKLOG.md         ← dated decisions and open items
 │   └── datasets/          ← one context md per logical dataset or thread
 ├── 01_basis/              ← FROZEN — reference material the work rests on
@@ -237,6 +238,9 @@ changes get their own entry.
 Instantiated from the `cowork-consultant` template **v{{TEMPLATE_VERSION}}**
 (<https://github.com/mladenpr/cowork_templates>) on {{DATE}}.
 
-A project is a copy, not a link — nothing propagates from the template after
-this point. This line is how you tell, months later, which rules and which
-tooling this project actually has.
+A project is a copy, not a link — nothing propagates from the template by
+itself. Upgrades are an explicit step: the toolbox's `upgrade_project.py`
+brings the scaffolding up to date, adds a dated line below this footer, and
+keeps the machine-readable record in `00_AI_context/TEMPLATE.json`. This
+footer is how you tell, months later, which rules and which tooling this
+project actually has.

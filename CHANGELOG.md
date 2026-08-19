@@ -23,6 +23,82 @@ Semantic versioning, read for a template rather than a library:
 - **patch** — fixes to the scripts or the documentation, with no change to the
   structure or the rules.
 
+## cowork-consultant 2.1.0 — 2026-08-19
+
+Projects can now be upgraded. The README has always said what an upgrade means
+— copy the scripts over, mind the docs, update the footer — and left every
+step of it to the person, along with the two questions the person cannot
+actually answer months later: *which of these files did I edit?* and *what
+values did the placeholders get?* This release records both at creation and
+adds the tool that uses the record.
+
+### Added — a machine-readable stamp: `00_AI_context/TEMPLATE.json`
+
+`new_project.py` now writes down what it did: which template, which version,
+the placeholder values it substituted, and a sha256 of every scaffolding file
+as instantiated. Scaffolding means the files the template owns and a project
+merely carries — `CLAUDE.md`, `README.md`, the `04_tools/` scripts, the
+`_TEMPLATE.md` stubs. Everything else the template ships is seed material that
+becomes project state the moment the project exists, and is deliberately not
+in the stamp.
+
+The prose footer stays, for people. The stamp is for tools: it is the
+difference between guessing whether a file was edited and knowing.
+
+### Added — `bin/upgrade_project.py`
+
+Brings a project's scaffolding up to the toolbox's template version, under one
+constraint that the tool holds by construction rather than by care: **nothing
+a project produced is ever an upgrade candidate.** Documents, frozen zones,
+context files, logs, drafts — never rewritten, never moved. Within the
+scaffolding, the recorded hash decides per file: unmodified is replaced (with
+placeholders re-substituted), locally edited is left alone with the new
+version written into `05_temp/template-upgrade-v<version>/` for review,
+no-longer-shipped goes to `_to_delete/` if unmodified (R8 — nothing is
+deleted) and stays put if edited, missing is restored. The failure mode
+everywhere is a review copy, never an overwrite.
+
+An applied upgrade adds a dated line under the README footer, appends a
+WORKLOG entry naming what changed, and records itself in `TEMPLATE.json` —
+so the stamp keeps meaning what it claims: which rules and which tooling this
+project actually has. The session-start scan is deliberately *not* run
+afterwards: rebaselining would silently absorb whatever else happened to be
+pending in the project, including a change in a frozen zone. Run
+`update_index.py --diff` yourself, read it, then rebuild.
+
+Two refusals are policy, not limitation. Across a major version the tool
+refuses — a major bump means an existing project cannot simply adopt the new
+rules, and that migration stays a hand job. And a toolbox older than the
+project is told to `git pull`, not to "upgrade" backwards.
+
+Projects created before the stamp existed are adopted on the first run:
+template and version are read from the README footer (the old names
+`cowork-project` and `sot-project` are recognised), and the toolbox's git
+history stands in for the missing hashes — a project file that matches any
+historical version of itself, after substitution, is provably unmodified.
+What cannot be proven is proposed, not replaced.
+
+### Changed — the docs know about the stamp
+
+The schema block, the README footer and the WORKLOG seed name
+`TEMPLATE.json`, and CLAUDE.md gains an invariant: the stamp is
+tooling-maintained, and a session never edits it — not even to "fix" it.
+
+## cowork-contractor 0.4.0 — 2026-08-19
+
+The same release as cowork-consultant 2.1.0, read through this template's
+numbering: the stamp records `05_tools/` scripts and both `_TEMPLATE.md` stubs
+(datasets and registers), proposals land in `06_temp/`, and the same docs gain
+the same lines.
+
+One thing is stricter here, and it is this template's own history that makes
+it so: below 1.0.0, `upgrade_project.py` treats the *minor* as the
+compatibility boundary. 0.2.0 → 0.3.0 changed the log's schema — exactly what
+pre-1.0 minors are allowed to do — so a 0.3.0 project is not auto-upgraded to
+0.4.0; the CHANGELOG and a hand migration are. Patch releases upgrade
+normally. Since 0.3.0 has not run on a live project, this strands nobody, and
+from 1.0.0 the boundary widens to the major like everywhere else.
+
 ## cowork-contractor 0.3.0 — 2026-08-18
 
 The log made a record. 0.2.0 introduced `LOG.jsonl` and called it the record;

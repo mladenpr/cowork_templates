@@ -13,10 +13,10 @@ so the entry stays resolvable later.
 
 - Structure instantiated from the `cowork-contractor` template
   **v{{TEMPLATE_VERSION}}**: `00_AI_context/` (PROJECT, PARTIES, INDEX,
-  MANIFEST, WORKLOG, datasets/, registers/), `01_contract/` (upstream/,
-  downstream/), `02_basis/`, `03_exchange/` (received/, issued/, LOG.jsonl,
-  LOG.md), `04_working/` (drafts/, analysis/, _extracted/), `05_tools/`,
-  `06_temp/`, `_inbox/`, `_to_delete/`.
+  MANIFEST, TEMPLATE.json, WORKLOG, datasets/, registers/), `01_contract/`
+  (upstream/, downstream/), `02_basis/`, `03_exchange/` (received/, issued/,
+  LOG.jsonl, LOG.md), `04_working/` (drafts/, analysis/, _extracted/),
+  `05_tools/`, `06_temp/`, `_inbox/`, `_to_delete/`.
 - Rules R1–R11 in README.md. `01_contract/`, `02_basis/` and `03_exchange/` are
   frozen; `04_working/` is mutable; `_inbox/` is unfiled staging and
   authoritative for nothing. CLAUDE.md points every session at the context

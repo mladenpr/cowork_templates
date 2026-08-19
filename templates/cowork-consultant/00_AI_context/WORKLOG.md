@@ -12,9 +12,10 @@ so the entry stays resolvable later.
 ## {{DATE}} — Repository created
 
 - Structure instantiated from the `cowork-consultant` template **v{{TEMPLATE_VERSION}}**:
-  `00_AI_context/` (PROJECT, INDEX, MANIFEST, WORKLOG, datasets/), `01_basis/`,
-  `02_exchange/` (received/, issued/, LOG.md), `03_working/` (drafts/,
-  analysis/, _extracted/), `04_tools/`, `05_temp/`, `_to_delete/`.
+  `00_AI_context/` (PROJECT, INDEX, MANIFEST, TEMPLATE.json, WORKLOG,
+  datasets/), `01_basis/`, `02_exchange/` (received/, issued/, LOG.md),
+  `03_working/` (drafts/, analysis/, _extracted/), `04_tools/`, `05_temp/`,
+  `_to_delete/`.
 - Rules R1–R10 in README.md. `01_basis/` and `02_exchange/` are frozen;
   `03_working/` is mutable. CLAUDE.md points every session at the context
   layer, the session-start scan, and the ingest and issue procedures.

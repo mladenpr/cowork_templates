@@ -73,6 +73,10 @@ any work in this project:
   not a new file per revision.
 - **Nothing in `_inbox/` is authoritative.** It is unfiled material. Do not
   quote a figure from it, and do not cite it in a draft; file it first.
+- **`00_AI_context/TEMPLATE.json` is tooling-maintained.** It records which
+  template version this project's scaffolding carries. Only the template
+  toolbox's `new_project.py` and `upgrade_project.py` write it — never edit
+  it, and never "fix" it to match anything.
 - After any file operation, regenerate `INDEX.md` and `MANIFEST.json` with
   `05_tools/update_index.py`.
 
