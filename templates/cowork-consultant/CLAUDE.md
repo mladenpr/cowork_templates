@@ -16,6 +16,9 @@ any work in this project:
    - **CHANGED in `03_working/`** → expected. Do not raise it.
    - **`MISSING DIR`** → recreate it, empty, and say so. It held nothing;
      if it did, those files are listed as MISSING and that is the real event.
+   - **`_inbox/` not empty** → say how many files are waiting and offer to
+     file them (procedure below). Do not read figures out of them in the
+     meantime.
    - **`CONFLICT?` or `BAD NAME`** → report and do not touch the file.
 4. Read `02_exchange/LOG.md` — the state of the conversation, and what is
    outstanding.
@@ -41,6 +44,8 @@ any work in this project:
   second is a record being written down, not a document being released.
 - **`03_working/` holds one live draft per deliverable**, revised in place —
   not a new file per revision.
+- **Nothing in `_inbox/` is authoritative.** It is unfiled material. Do not
+  quote a figure from it, and do not cite it in a draft; file it first.
 - **`00_AI_context/TEMPLATE.json` is tooling-maintained.** It records which
   template version this project's scaffolding carries. Only the template
   toolbox's `new_project.py` and `upgrade_project.py` write it — never edit
@@ -51,8 +56,9 @@ any work in this project:
 ## Procedure: ingest a document that arrived
 
 Triggered whenever a **file** reaches the project from outside — uploaded into
-the chat, an email attachment, dropped into the folder, found by the scan. Text
-pasted into the chat window is not a file and is not ingested; see below.
+the chat, an email attachment, dropped into the folder or into `_inbox/`, found
+by the scan. Text pasted into the chat window is not a file and is not
+ingested; see below.
 
 1. Decide the zone, and ask if it is not obvious: `02_exchange/received/` if it
    is part of the conversation with another party, `01_basis/` if it is
@@ -69,6 +75,29 @@ pasted into the chat window is not a file and is not ingested; see below.
 6. Report what was filed, and anything the extraction flagged — a scan needing
    OCR, a rights-managed file, tracked changes — since those belong in the
    context md.
+
+## Procedure: clear the inbox
+
+Triggered by the user asking, or offered when the scan reports `_inbox/` is not
+empty. The user drops files there without deciding where they belong; deciding
+is this procedure.
+
+1. List what is there, grouped by what it looks like, and say what you propose
+   for each — zone, party, thread. Do not move anything yet. Read the dates off
+   the documents themselves while you are at it, and say which files carry
+   none. A batch dropped as a folder is one set: propose one destination for
+   it, not one per file.
+2. Ask about everything you are not sure of, in one go rather than file by file.
+   A batch of forty documents is normal here; forty questions is not.
+3. Ingest the ones that are settled by the procedure above, in one pass. The
+   LOG row's **Date** is the date on the document, never the day it was filed;
+   its **Ref** says how it arrived and ends with `backfilled <today> from the
+   document` (R4), because the row is being written after the event. A
+   document with no date on it waits for the user to supply one — a guessed
+   date looks like a fact.
+4. Leave the rest in `_inbox/` and say what is still waiting and why. A file
+   that stays unfiled because nobody knows what it is stays visible, and that
+   is the point.
 
 ## Email text pasted into the session
 

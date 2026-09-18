@@ -16,7 +16,7 @@ scan that forces it to notice what changed since last time.
 
 | Template | Version | Use it for |
 |---|---|---|
-| [`cowork-consultant`](templates/cowork-consultant) | 2.1.0 | Consulting engagements — any project that exchanges documents with another party: inputs arrive, work happens, documents are issued. |
+| [`cowork-consultant`](templates/cowork-consultant) | 2.2.0 | Consulting engagements — any project that exchanges documents with another party: inputs arrive, work happens, documents are issued. |
 | [`cowork-contractor`](templates/cowork-contractor) | 0.4.0 | Work performed under a contract, from award onwards — either tier, main or sub. Adds a contract zone, party sub-folders, a queryable exchange log and registers. Below 1.0 until it has been run on a live project. |
 | [`cowork-author`](templates/cowork-author) | 0.2.0 | Writing a project's documents from the ground up — method statements, plans, reports, technical proposals — through many internal revisions across many sessions, from a brief, reference material, an example and a branded template, to submission. One repository per real project, all of its documents in it. Role-neutral: the loop is the same for a consultant and a contractor. A priced quotation, or a revision of a document already issued, is ordinarily a consultant job. Adds a frozen revision zone with its own log, a context file per deliverable, basis sub-folders by role, a drop zone, a draft diff, and an index that rolls media folders up. Below 1.0 until it has been run on a live project. |
 
@@ -47,6 +47,7 @@ see [Versioning](#versioning). Pick one with `--template`.
 │   └── _extracted/        ← searchable text layer (regenerated)
 ├── 04_tools/              ← kept scripts
 ├── 05_temp/               ← disposable scratch
+├── _inbox/                ← drop zone: arrivals not yet filed, counted by every scan
 └── _to_delete/            ← cleanup staging (only the human empties it)
 ```
 
@@ -78,6 +79,12 @@ gains a row and the WORKLOG a dated entry. You decide *when*; the clerical work
 is not yours to remember. What this replaces — quietly renaming a draft — leaves
 the project unable to say what was sent, to whom, or under what cover.
 
+And one courtesy: **filing is the agent's job.** Drop whatever arrives into
+`_inbox/` without deciding where it belongs. Every scan counts what is waiting
+there until it is empty; the session proposes a home for each file — zone,
+party, thread — asks about what it cannot tell, and files the rest by the
+ingestion rule. Nothing in the inbox is authoritative until it has been filed.
+
 The ten rules that formalise this are in
 [`templates/cowork-consultant/README.md`](templates/cowork-consultant/README.md).
 
@@ -104,7 +111,6 @@ consulting engagement does not:
 - **Registers** (`00_AI_context/registers/`) for controlled series — variations,
   RFIs, POs, payment applications. The log says what happened; a register says
   where a series stands, and is read by its gaps.
-- **`_inbox/`** for arrivals not yet filed, counted by every scan until empty.
 
 Inserting the contract zone shifts the numbering, so a contractor project has
 `04_working/`, `05_tools/`, `06_temp/`. The rules are R1–R11, in

@@ -33,6 +33,9 @@ Behavior:
   separately. A file that changed or vanished there means either a rule was
   broken or the sync client did something, and neither is for a session to
   resolve. The same event in 03_working/ is just a draft being drafted.
+- Files sitting in _inbox/ are counted and reported. The inbox is where things
+  land before they are filed — not a zone: anything in it is unfiled and
+  authoritative for nothing, and the count is repeated every run until empty.
 - Both modes also print WARNINGS: suspected sync-conflict copies, and names
   OneDrive/SharePoint will refuse to sync. Warnings never change the exit code
   on their own — they are for the human to resolve.
@@ -80,6 +83,10 @@ SKIP_PATHS = {"00_AI_context/INDEX.md", "00_AI_context/MANIFEST.json"}
 # alarm; the same event in 03_working/ is a draft being drafted.
 FROZEN_DIRS = ("01_basis/", "02_exchange/")
 
+# Staging for arrivals that have not been filed yet (R3). Not a zone: nothing
+# in it is authoritative, and it is meant to be emptied.
+INBOX_DIR = "_inbox/"
+
 # The schema (README). Checked by name because the manifest cannot see them:
 # it records files, and an empty directory holds none. Recreating one is safe
 # — it holds nothing — but that it went missing is worth a line, and if it
@@ -90,12 +97,24 @@ REQUIRED_DIRS = (
     "02_exchange", "02_exchange/received", "02_exchange/issued",
     "03_working", "03_working/drafts", "03_working/analysis",
     "03_working/_extracted",
-    "04_tools", "05_temp", "_to_delete",
+    "04_tools", "05_temp", "_inbox", "_to_delete",
 )
 
 
 def frozen(rel):
     return rel.startswith(FROZEN_DIRS)
+
+
+def report_inbox(paths):
+    """Anything sitting unfiled is worth saying out loud, every time."""
+    waiting = sorted(p for p in paths if p.startswith(INBOX_DIR))
+    if not waiting:
+        return
+    print(f"\n{len(waiting)} file(s) in {INBOX_DIR} awaiting filing (R3):")
+    for p in waiting[:20]:
+        print(f"  INBOX     {p}")
+    if len(waiting) > 20:
+        print(f"  … and {len(waiting) - 20} more")
 
 
 # Names SharePoint/OneDrive refuse to sync. Characters first, then the
@@ -328,6 +347,7 @@ def diff(root, args):
               f"frozen zone"
               + (f"; {len(gone)} schema director"
                  f"{'y' if len(gone) == 1 else 'ies'} missing." if gone else "."))
+    report_inbox(new)
     print_warnings(*warnings_for(new, args.device))
     return 1 if dirty else 0
 
@@ -398,7 +418,9 @@ def regenerate(root, name, args):
     print(f"INDEX.md and MANIFEST.json regenerated — {len(files)} files"
           f"{' (hashed)' if with_hash else ''}.")
     print_missing_dirs(missing_dirs(root))
-    print_warnings(*warnings_for({f["path"] for f in files}, args.device))
+    paths = {f["path"] for f in files}
+    report_inbox(paths)
+    print_warnings(*warnings_for(paths, args.device))
     return 0
 
 
