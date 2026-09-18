@@ -23,6 +23,54 @@ Semantic versioning, read for a template rather than a library:
 - **patch** — fixes to the scripts or the documentation, with no change to the
   structure or the rules.
 
+## cowork-consultant 2.2.0 — 2026-09-18
+
+The drop zone the other two templates already had. `cowork-contractor` gained
+`_inbox/` at 0.2.0 and `cowork-author` at 0.2.0, and the consultant — the
+template the pattern started with — was the one left asking its user to decide
+where a file belongs before it can be dropped. That is the wrong way round: the
+rules for where things go are written down in this README precisely so that a
+session can apply them. A minor: one new directory, one new procedure, and a
+scan that says one more thing. An existing project can take it or leave it.
+
+### Added — `_inbox/`
+
+Staging for what has arrived and not been filed: an attachment not yet decided
+about, a batch off an old drive, a folder someone sent on a stick. Drop it
+there and stop thinking about it. Not a zone — nothing in it is authoritative,
+no figure is read from it, nothing in it is extracted — and the session-start
+scan counts what is sitting there on every run until it is empty: `n file(s)
+in _inbox/ awaiting filing (R3)`. It is schema, so a project whose inbox has
+vanished is told so by name.
+
+### Added — the clear-the-inbox procedure
+
+CLAUDE.md gains it, offered whenever the scan reports the inbox is not empty.
+The session lists what is there, proposes a home for each file — zone, party,
+thread — and the dates read off the documents, asks about everything it is
+unsure of in one go, files what is settled by the ordinary ingest procedure,
+and leaves the rest where it is, saying why. A batch dropped as a folder is
+one set and one decision. Forty documents are normal here; forty questions are
+not.
+
+### Changed — R3, R4 and R7 say what the inbox is
+
+R3 states that the inbox is where things land and that the rule, not the
+inbox, is what files them: a file dropped anywhere else still surfaces as NEW
+and is filed the same way. R4 gains the second case of a row written after the
+event: a document filed out of the inbox takes its own date in **Date** and a
+`backfilled` note in **Ref**, the same marking a mid-engagement backfill
+carries, for the same reason. R7 lists the count as the one scan result that is
+neither an alarm nor routine — a reminder that the record is incomplete by
+exactly that much. CLAUDE.md gains the matching scan line and invariant.
+
+### Upgrading a 2.1.0 project
+
+`upgrade_project.py` replaces the scripts and docs but does not create
+directories. After the upgrade, the first `update_index.py --diff` reports
+`MISSING DIR  _inbox/`, and the session creates it, empty, as CLAUDE.md
+already tells it to for any schema directory. That is the whole migration.
+
 ## cowork-author 0.2.0 — 2026-08-19
 
 One project, many documents. 0.1.0 was designed around a document; the

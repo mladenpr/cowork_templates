@@ -82,7 +82,8 @@ from xml.etree import ElementTree as ET
 # The frozen zones (R1) are what gets extracted: reference material and both
 # directions of the exchange. 03_working/ is not extracted — it is already
 # yours, already mutable, and extracting a live draft would only produce a
-# stale copy of something that changes hourly.
+# stale copy of something that changes hourly. _inbox/ is not extracted
+# either: nothing in it is filed, so nothing in it is quotable.
 SOURCE_DIRS = ("01_basis", "02_exchange")
 OUT_DIR = os.path.join("03_working", "_extracted")
 

@@ -33,6 +33,7 @@ directory layout is that distinction made visible.
 │   └── _extracted/        ← searchable text layer (regenerated)
 ├── 04_tools/              ← kept scripts
 ├── 05_temp/               ← disposable scratch, purgeable without thought
+├── _inbox/                ← arrivals not yet filed (staging, not a zone)
 └── _to_delete/            ← cleanup staging (the user empties it)
 ```
 
@@ -40,6 +41,11 @@ The numbers are **not** pipeline order — `02_exchange/` holds both inputs and
 outputs, so no pipeline reading is possible. They order the directories by
 status: frozen first (`01`, `02`), then mutable (`03`), then machinery (`04`,
 `05`).
+
+Two directories sit outside the numbering because neither is a zone: `_inbox/`
+holds what has arrived and not yet been filed, and `_to_delete/` holds what is
+on its way out. Nothing in either is authoritative, and both are meant to be
+empty most of the time.
 
 ## Working rules
 
@@ -81,6 +87,18 @@ named step: into `02_exchange/received/` if it is part of the conversation, or
 `01_basis/` if it is reference material; its context md written or extended; a
 row appended to the LOG; the text layer extracted; INDEX and MANIFEST
 regenerated. Nothing raw is worked on where it landed.
+
+**`_inbox/` is where things land.** It exists because the alternative to a
+staging area is not tidiness, it is documents left on a desktop. Drop anything
+there — an attachment you have not decided about, a batch off an old drive, a
+folder someone sent on a stick — and the next session decides where each file
+belongs and files it by this rule, asking where it cannot tell. Drop a batch as
+a folder and it arrives as one set, one decision. Two things follow from it
+being staging rather than a zone: **nothing in `_inbox/` is authoritative**,
+so no figure is ever read from it into a draft and nothing in it is extracted,
+and the session-start scan counts what is sitting there every time until it is
+empty. A file dropped anywhere else still surfaces as NEW and is filed the same
+way — the inbox is the courtesy, not the rule.
 
 **Text pasted into a chat window is not ingestion.** An email quoted into a
 session so it can be read, checked or answered is working material. A session
@@ -139,7 +157,10 @@ never reconstructed later — with one exception: a repository that starts
 mid-engagement backfills its history once, and every backfilled row says so in
 Ref, with the date it was written and what it was reconstructed from. A
 reconstruction marked as one is a record; an unmarked one is a guess that looks
-like a fact.
+like a fact. A row written for something filed out of `_inbox/` is marked the
+same way, because it too is written after the event: Date is the date on the
+document, and Ref says when the row was written and that it was written from
+the document rather than at its arrival.
 
 **R5 — Issuing is an explicit step, never a rename.** A document leaves the
 project only by being issued, and issuing is something you ask for by name. On
@@ -177,6 +198,9 @@ severity of a result depends on where it is:
 - **CHANGED in `03_working/`** → normal. That is a draft being drafted.
 - **MISSING DIR** → a directory of the schema is gone. Recreate it, empty, and
   say so; anything it held is listed as MISSING and is the real event.
+- **Anything in `_inbox/`** → reported as a count every scan, until it is
+  filed. It is not an alarm; it is a reminder that the project's record is
+  incomplete by exactly that much.
 
 **R8 — Never delete; stage instead.** Cleanup means moving files into
 `_to_delete/` under non-colliding names and reporting what was moved. The user

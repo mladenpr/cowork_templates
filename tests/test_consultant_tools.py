@@ -312,10 +312,48 @@ class Project(unittest.TestCase):
         self.assertEqual(code, 0, out)
         self.assertIn("Clean", out)
         self.assertEqual(index.missing_dirs(self.proj), [])
-        for rel in ("VERSION", "01_basis/.gitkeep"):
+        for rel in ("VERSION", "01_basis/.gitkeep", "_inbox/.gitkeep"):
             self.assertFalse(os.path.exists(os.path.join(self.proj, rel)), rel)
+        self.assertTrue(os.path.isdir(os.path.join(self.proj, "_inbox")))
         with open(os.path.join(self.proj, "README.md"), encoding="utf-8") as f:
             self.assertNotIn("{{", f.read())
+
+    def test_inbox_is_counted_until_empty_and_is_schema(self):
+        inbox = os.path.join(self.proj, "_inbox")
+        for name in ("attachment.pdf", "old-drive", "old-drive/scan.docx"):
+            full = os.path.join(inbox, name)
+            if os.path.splitext(name)[1]:
+                open(full, "wb").close()
+            else:
+                os.makedirs(full)
+        code, out = self.diff()
+        self.assertEqual(code, 1, out)
+        self.assertIn("2 file(s) in _inbox/ awaiting filing (R3)", out)
+        self.assertIn("NEW      _inbox/attachment.pdf", out)
+        self.assertIn("INBOX     _inbox/old-drive/scan.docx", out)
+        # Regeneration baselines the files, indexes them, and still counts them.
+        code, out = self.reindex()
+        self.assertEqual(code, 0, out)
+        self.assertIn("2 file(s) in _inbox/", out)
+        with open(os.path.join(self.proj, "00_AI_context", "INDEX.md"),
+                  encoding="utf-8") as f:
+            self.assertIn("_inbox/attachment.pdf", f.read())
+        code, out = self.diff()
+        self.assertEqual(code, 0, out)
+        self.assertNotIn("NEW", out)
+        self.assertIn("2 file(s) in _inbox/", out)
+        # Nothing unfiled is extracted: the inbox is not a source zone.
+        code, out = self.extract()
+        self.assertEqual(code, 0, out)
+        self.assertFalse(os.path.exists(os.path.join(
+            self.proj, "03_working", "_extracted", "_inbox")))
+        self.assertNotIn("_inbox", out)
+        # Emptied, the count goes away; removed, the inbox is a missing schema dir.
+        shutil.rmtree(inbox)
+        code, out = self.diff()
+        self.assertNotIn("awaiting filing", out)
+        self.assertIn("MISSING DIR  _inbox/", out)
+        self.assertEqual(index.missing_dirs(self.proj), ["_inbox"])
 
     def test_missing_schema_directory_is_reported(self):
         # The bug this pins: the manifest records files, so a directory that
